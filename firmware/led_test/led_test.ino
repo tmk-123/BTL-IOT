@@ -47,6 +47,6 @@ void loop() {
 
   Serial.println("--- Pha 2: chu ky den giao thong rut gon ---");
   showOnly(PIN_GREEN,  "XANH", 3000);
-  showOnly(PIN_YELLOW, "VANG", 1000);
+  showOnly(PIN_YELLOW, "VANG", 5000);
   showOnly(PIN_RED,    "DO",   3000);
 }

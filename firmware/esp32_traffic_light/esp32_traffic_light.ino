@@ -10,6 +10,7 @@
 
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <esp_wifi.h>
 #include "config.h"
 #include "secrets.h"   // copy từ secrets.example.h
 
@@ -25,8 +26,25 @@ PubSubClient mqtt(netClient);
 const char* TOPIC_STATE  = MQTT_TOPIC_BASE "/state";
 const char* TOPIC_STATUS = MQTT_TOPIC_BASE "/status";
 bool wifiWasConnected = false;
+volatile bool wifiRetryPending = false;
+unsigned long lastWifiAttemptAt = 0;
 unsigned long lastMqttAttemptAt = 0;
 unsigned long lastHeartbeatAt = 0;
+const unsigned long WIFI_RETRY_INTERVAL_MS = 10000UL;
+
+const char* wifiStatusName(wl_status_t s) {
+  switch (s) {
+    case WL_NO_SHIELD:       return "NO_SHIELD";
+    case WL_IDLE_STATUS:     return "IDLE";
+    case WL_NO_SSID_AVAIL:   return "NO_SSID_AVAIL (khong tim thay SSID)";
+    case WL_SCAN_COMPLETED:  return "SCAN_COMPLETED";
+    case WL_CONNECTED:       return "CONNECTED";
+    case WL_CONNECT_FAILED:  return "CONNECT_FAILED (sai pass hoac router tu choi)";
+    case WL_CONNECTION_LOST: return "CONNECTION_LOST";
+    case WL_DISCONNECTED:    return "DISCONNECTED";
+    default:                 return "UNKNOWN";
+  }
+}
 
 const char* stateName(LightState s) {
   switch (s) {
@@ -110,6 +128,27 @@ void connectMqtt() {
   }
 }
 
+void connectWiFi() {
+  WiFi.mode(WIFI_STA);
+  // Tự quản lý retry sau sự kiện DISCONNECTED để không gọi begin() chồng
+  // lên một lần kết nối đang diễn ra.
+  WiFi.setAutoReconnect(false);
+
+  // Mở rộng kênh 1-13 (chuẩn Việt Nam)
+  wifi_country_t country = {
+    .cc = "VN",
+    .schan = 1,
+    .nchan = 13,
+    .max_tx_power = 20,
+    .policy = WIFI_COUNTRY_POLICY_MANUAL
+  };
+  esp_wifi_set_country(&country);
+
+  WiFi.setSleep(false);
+  // Bắt đầu kết nối đúng một lần; maintainNetwork chỉ retry sau event.
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+}
+
 // Gọi mỗi vòng loop(): theo dõi Wi-Fi, thử lại MQTT theo chu kỳ, xử lý keep-alive.
 void maintainNetwork(unsigned long now) {
   bool wifiUp = (WiFi.status() == WL_CONNECTED);
@@ -122,7 +161,19 @@ void maintainNetwork(unsigned long now) {
       Serial.printf("[t=%lu ms] WiFi: mat ket noi, dang tu ket noi lai...\n", now);
     }
   }
-  if (!wifiUp) return;
+
+  // Chỉ thử lại sau khi driver đã báo STA_DISCONNECTED.
+  if (!wifiUp) {
+    if (wifiRetryPending && now - lastWifiAttemptAt >= WIFI_RETRY_INTERVAL_MS) {
+      wifiRetryPending = false;
+      lastWifiAttemptAt = now;
+      wl_status_t st = WiFi.status();
+      Serial.printf("[t=%lu ms] WiFi chua ket noi (st=%d: %s) -> thu lai SSID: %s\n",
+                    now, (int)st, wifiStatusName(st), WIFI_SSID);
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    }
+    return;
+  }
 
   if (!mqtt.connected()) {
     if (now - lastMqttAttemptAt >= MQTT_RETRY_INTERVAL_MS) {
@@ -155,7 +206,7 @@ void enterState(LightState s, unsigned long now) {
 
 void setup() {
   Serial.begin(SERIAL_BAUD);
-  delay(200);  // chờ Serial ổn định; chỉ chạy một lần khi khởi động
+  delay(2000);  // chờ 2s để Serial Monitor mở kịp, bắt trọn vẹn log khởi động
 
   pinMode(PIN_LED_RED, OUTPUT);
   pinMode(PIN_LED_YELLOW, OUTPUT);
@@ -171,10 +222,23 @@ void setup() {
   Serial.printf("WiFi SSID: %s | MQTT: %s:%d | topic: %s\n",
                 WIFI_SSID, MQTT_HOST, MQTT_PORT, TOPIC_STATE);
 
-  // Wi-Fi: begin() không chặn; đèn bắt đầu chạy ngay, kết nối hoàn tất sau.
-  WiFi.mode(WIFI_STA);
-  WiFi.setAutoReconnect(true);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  // Đăng ký theo dõi sự kiện Wi-Fi chi tiết để chẩn đoán chính xác
+  WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
+    if (event == ARDUINO_EVENT_WIFI_STA_CONNECTED) {
+      Serial.println("\n>>> [WiFi] DA BAT TAY VOI ROUTER! Dang cho router cap IP...");
+    } else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
+      wifiRetryPending = false;
+      Serial.printf("\n>>> [WiFi] KET NOI THANH CONG! IP ESP32 = %s <<<\n", WiFi.localIP().toString().c_str());
+    } else if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+      wifiRetryPending = true;
+      Serial.printf("\n>>> [WiFi Event] Mat ket noi! Ma ly do = %d <<<\n", info.wifi_sta_disconnected.reason);
+    }
+  });
+
+  // Bắt đầu kết nối
+  Serial.println("Dang ket noi WiFi...");
+  connectWiFi();
+  lastWifiAttemptAt = millis();
 
   // Giới hạn thời gian chờ để lúc broker không tới được, loop() bị chặn ít nhất có thể.
   netClient.setConnectionTimeout(MQTT_CONNECT_TIMEOUT_MS);
