@@ -3,13 +3,13 @@
 3 LED chạy chu kỳ **Xanh 10 s → Vàng 3 s → Đỏ 10 s**, đồng thời gửi trạng thái đèn lên **MQTT broker**
 (Mosquitto chạy trên laptop). Đèn **không phụ thuộc mạng**: mất Wi-Fi/broker thì đèn vẫn chạy.
 
-| File | Vai trò |
-|---|---|
-| `esp32_traffic_light.ino` | Chương trình chính: máy trạng thái đèn (`millis()`) + Wi-Fi + MQTT |
-| `config.h` | GPIO, thời gian đèn, topic, chu kỳ heartbeat — **sửa ở đây** |
-| `secrets.example.h` | Mẫu thông tin Wi-Fi / broker. Copy thành `secrets.h` rồi điền |
-| `secrets.h` | Thông tin thật — **không đưa lên Git** (đã có trong `.gitignore`) |
-| `diagram.json` | Sơ đồ mạch cho Wokwi |
+| File                        | Vai trò                                                                            |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| `esp32_traffic_light.ino` | Chương trình chính: máy trạng thái đèn (`millis()`) + Wi-Fi + MQTT       |
+| `config.h`                | GPIO, thời gian đèn, topic, chu kỳ heartbeat — **sửa ở đây**         |
+| `secrets.example.h`       | Mẫu thông tin Wi-Fi / broker. Copy thành `secrets.h` rồi điền               |
+| `secrets.h`               | Thông tin thật — **không đưa lên Git** (đã có trong `.gitignore`) |
+| `diagram.json`            | Sơ đồ mạch cho Wokwi                                                            |
 
 > Arduino IDE yêu cầu tên thư mục trùng tên file `.ino` (`esp32_traffic_light`).
 
@@ -37,11 +37,11 @@ Sửa: **File → Preferences → Sketchbook location** → đổi thành `C:\Ar
 
 ## 1. Đấu dây
 
-| LED | GPIO | Đấu |
-|---|---|---|
-| Đỏ | 25 | GPIO25 → điện trở 220 Ω → chân **dài** LED; chân **ngắn** → GND |
-| Vàng | 26 | GPIO26 → điện trở 220 Ω → chân dài LED; chân ngắn → GND |
-| Xanh | 27 | GPIO27 → điện trở 220 Ω → chân dài LED; chân ngắn → GND |
+| LED   | GPIO | Đấu                                                                                  |
+| ----- | ---- | -------------------------------------------------------------------------------------- |
+| Đỏ  | 25   | GPIO25 → điện trở 220 Ω → chân **dài** LED; chân **ngắn** → GND |
+| Vàng | 26   | GPIO26 → điện trở 220 Ω → chân dài LED; chân ngắn → GND                     |
+| Xanh  | 27   | GPIO27 → điện trở 220 Ω → chân dài LED; chân ngắn → GND                     |
 
 **Bắt buộc có điện trở.** GPIO 25/26/27 là giả định (DECISIONS D-10); đổi chân → sửa `config.h`.
 
@@ -49,24 +49,24 @@ Sửa: **File → Preferences → Sketchbook location** → đổi thành `C:\Ar
 
 ## 2. Dữ liệu ESP32 gửi đi (hợp đồng MQTT)
 
-| Topic | Payload | Retained | Khi nào gửi |
-|---|---|---|---|
-| `traffic/inter1/light/state` | JSON (dưới đây) | Không | Khi đổi đèn (`change`), mỗi 1 s (`heartbeat`), khi vừa kết nối (`connect`) |
-| `traffic/inter1/light/status` | `online` / `offline` | Có | `online` khi kết nối; `offline` do broker tự gửi (**Last Will**) khi ESP32 mất kết nối |
+| Topic                           | Payload                  | Retained | Khi nào gửi                                                                                           |
+| ------------------------------- | ------------------------ | -------- | ------------------------------------------------------------------------------------------------------- |
+| `traffic/inter1/light/state`  | JSON (dưới đây)      | Không   | Khi đổi đèn (`change`), mỗi 1 s (`heartbeat`), khi vừa kết nối (`connect`)                |
+| `traffic/inter1/light/status` | `online` / `offline` | Có      | `online` khi kết nối; `offline` do broker tự gửi (**Last Will**) khi ESP32 mất kết nối |
 
 ```json
 {"device":"esp32-inter1","state":"RED","seq":3,"ms_in_state":1830,
  "duration_ms":10000,"uptime_ms":15033,"reason":"heartbeat"}
 ```
 
-| Trường | Ý nghĩa |
-|---|---|
-| `state` | `GREEN` / `YELLOW` / `RED` (ESP32 không bao giờ gửi `UNKNOWN`; `UNKNOWN` do laptop tự suy ra) |
-| `seq` | Tăng 1 mỗi lần đổi đèn. Nhảy cóc → laptop biết đã mất bản tin |
+| Trường        | Ý nghĩa                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| `state`       | `GREEN` / `YELLOW` / `RED` (ESP32 không bao giờ gửi `UNKNOWN`; `UNKNOWN` do laptop tự suy ra)  |
+| `seq`         | Tăng 1 mỗi lần đổi đèn. Nhảy cóc → laptop biết đã mất bản tin                                 |
 | `ms_in_state` | Đèn hiện tại đã sáng bao lâu. Laptop tính: *thời điểm đổi đèn = lúc nhận − ms_in_state* |
-| `duration_ms` | Tổng thời gian của đèn hiện tại |
-| `uptime_ms` | `millis()` của ESP32 — chỉ để debug; giảm về nhỏ → ESP32 vừa khởi động lại |
-| `reason` | `change` / `heartbeat` / `connect` |
+| `duration_ms` | Tổng thời gian của đèn hiện tại                                                                       |
+| `uptime_ms`   | `millis()` của ESP32 — chỉ để debug; giảm về nhỏ → ESP32 vừa khởi động lại                   |
+| `reason`      | `change` / `heartbeat` / `connect`                                                                     |
 
 **Quy tắc phía laptop** (sẽ làm ở GĐ 4): quá **1,5 s** không nhận bản tin `state`, hoặc `status` = `offline`
 → trạng thái `UNKNOWN`.
@@ -144,6 +144,7 @@ Cửa sổ 2 in `traffic/inter1/light/state test` → broker hoạt động.
 ### 4.5. Kết quả mong đợi
 
 Serial Monitor:
+
 ```text
 === ESP32 Traffic Light - buoc 1b (Wi-Fi + MQTT) ===
 ...
@@ -156,6 +157,7 @@ Serial Monitor:
 ```
 
 Cửa sổ 2 (`mosquitto_sub`):
+
 ```text
 traffic/inter1/light/status online
 traffic/inter1/light/state {"device":"esp32-inter1","state":"GREEN","seq":1,"ms_in_state":4848,...,"reason":"connect"}
@@ -190,14 +192,14 @@ Chỉ dùng cách này để thử logic, không gửi dữ liệu thật lên b
 
 ## 6. Lỗi thường gặp
 
-| Hiện tượng | Nguyên nhân hay gặp |
-|---|---|
-| `PubSubClient.h: No such file or directory` dù đã cài | Sketchbook ở đường dẫn có dấu → mục 0.1 |
-| Wi-Fi không bao giờ `da ket noi` | Mạng 5 GHz; sai mật khẩu; Wi-Fi trường cần đăng nhập web (captive portal) → dùng hotspot điện thoại 2,4 GHz |
-| `rc=-2` | Sai `MQTT_HOST`; broker chưa chạy hoặc vẫn là service mặc định (chỉ localhost); firewall chặn; mạng có *client isolation* (Wi-Fi trường/công cộng thường chặn các thiết bị nói chuyện với nhau) |
-| `rc=4` hoặc `rc=5` | Sai user/mật khẩu MQTT, hoặc chưa trỏ `password_file` đúng (phải chạy broker từ thư mục gốc dự án) |
-| Broker báo `Address already in use` | Service `mosquitto` vẫn chạy → mục 3.1 |
-| Kết nối được rồi mất liên tục | Hai ESP32 dùng trùng `DEVICE_ID` → broker đá nhau |
+| Hiện tượng                                               | Nguyên nhân hay gặp                                                                                                                                                                                                       |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PubSubClient.h: No such file or directory` dù đã cài | Sketchbook ở đường dẫn có dấu → mục 0.1                                                                                                                                                                             |
+| Wi-Fi không bao giờ `da ket noi`                        | Mạng 5 GHz; sai mật khẩu; Wi-Fi trường cần đăng nhập web (captive portal) → dùng hotspot điện thoại 2,4 GHz                                                                                                    |
+| `rc=-2`                                                   | Sai `MQTT_HOST`; broker chưa chạy hoặc vẫn là service mặc định (chỉ localhost); firewall chặn; mạng có *client isolation* (Wi-Fi trường/công cộng thường chặn các thiết bị nói chuyện với nhau) |
+| `rc=4` hoặc `rc=5`                                     | Sai user/mật khẩu MQTT, hoặc chưa trỏ `password_file` đúng (phải chạy broker từ thư mục gốc dự án)                                                                                                          |
+| Broker báo `Address already in use`                      | Service `mosquitto` vẫn chạy → mục 3.1                                                                                                                                                                                 |
+| Kết nối được rồi mất liên tục                      | Hai ESP32 dùng trùng `DEVICE_ID` → broker đá nhau                                                                                                                                                                     |
 
 ## 7. Hạn chế đã biết
 
