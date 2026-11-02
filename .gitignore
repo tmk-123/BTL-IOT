@@ -3,7 +3,6 @@
 .venv/
 __pycache__/
 *.pyc
-**/secrets.h
 tools/mosquitto/passwd
 # Generated camera images
 data/snapshots/
