@@ -10,8 +10,9 @@
 // ===========================
 // Enter your WiFi credentials
 // ===========================
-const char *ssid = "Redmi";
-const char *password = "1234567@";
+#include "secrets.h"
+const char *ssid = WIFI_SSID;
+const char *password = WIFI_PASSWORD;
 
 void startCameraServer();
 void setupLedFlash();

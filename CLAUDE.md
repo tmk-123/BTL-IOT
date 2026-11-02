@@ -14,15 +14,19 @@ Người dùng đang học và cần hiểu mục tiêu, cách hoạt động, l
 - Sản phẩm cần có ứng dụng giao diện để xem dữ liệu vi phạm. Ưu tiên bản web local trước; framework cụ thể vẫn có thể đánh giá.
 - Ưu tiên hoàn thành hệ thống local trước. Cloud, app mobile, nhiều camera và tính năng nâng cao chỉ làm sau khi lõi ổn định.
 
-## 3. Những lựa chọn chưa chốt — không được coi là yêu cầu cố định
+## 3. Lựa chọn đã thống nhất và phần còn mở
+
+Theo xác nhận người dùng ngày 01/11/2026:
+
+- MQTT đã chốt cho trạng thái đèn; Mosquitto trên laptop. Video camera dùng HTTP riêng.
+- Đã thống nhất hướng YOLO bản nhỏ + ByteTrack, SQLite và Streamlit local.
+- Phiên bản/trọng số model, công cụ OCR, đồng bộ thời gian và GPIO thực tế vẫn cần đánh giá/xác nhận.
+- Đọc `docs/DINH_HUONG_DU_AN.md` và `docs/DECISIONS.md` trước khi đề xuất thay đổi; không hỏi lại các lựa chọn đã xác nhận nếu không có lý do mới.
 
 Các mục sau là phương án có thể xem xét dựa trên độ đơn giản, khả năng tích hợp, môi trường và yêu cầu môn học:
 
-- Giao tiếp ESP32–laptop: HTTP hoặc MQTT.
-- Database: SQLite hoặc MySQL (có thể xem xét phương án khác nếu có lý do).
-- Giao diện: Streamlit hoặc Flask/FastAPI kết hợp frontend.
-- Model phát hiện phương tiện, model phát hiện biển số và công cụ OCR.
-- Tracking: ByteTrack hoặc SORT.
+- Phiên bản và trọng số YOLO cụ thể, model phát hiện biển số và công cụ OCR.
+- Cách đồng bộ thời gian, ngưỡng hết hạn trạng thái và GPIO theo mạch thật.
 - Cách đóng gói môi trường, bao gồm có dùng Docker hay không.
 
 Trước khi thay đổi hoặc chốt một lựa chọn quan trọng:
@@ -69,7 +73,7 @@ Không kết luận vi phạm chỉ vì xe xuất hiện gần vạch khi đèn 
 ## 6. Nguyên tắc kỹ thuật
 
 - Phát triển từ đơn giản đến phức tạp; mỗi lần chỉ làm một khối có thể kiểm thử.
-- Ưu tiên video có sẵn trước webcam realtime.
+- Nguồn hình hiện tại là ESP32-CAM theo yêu cầu người dùng; có thể dùng video có sẵn để kiểm thử lặp lại.
 - Ưu tiên chạy local trước cloud.
 - Tách module hợp lý, nhưng không tạo kiến trúc quá phức tạp cho bài tập lớn.
 - Giữ cấu hình có thể thay đổi (GPIO, thời gian đèn, vạch dừng, confidence threshold, đường dẫn video).

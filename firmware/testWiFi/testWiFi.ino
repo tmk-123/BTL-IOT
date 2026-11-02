@@ -1,7 +1,8 @@
 #include <WiFi.h>
 
-const char *ssid = "Redmi";
-const char *password = "1234567@";
+#include "secrets.h"
+const char *ssid = WIFI_SSID;
+const char *password = WIFI_PASSWORD;
 
 const char *statusName(wl_status_t status) {
   switch (status) {

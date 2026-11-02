@@ -1,4 +1,16 @@
-i 
+# Chạy camera trên laptop
+
+Đọc trước: [Định hướng và tiến độ](docs/DINH_HUONG_DU_AN.md) · [Các quyết định kỹ thuật](docs/DECISIONS.md).
+
+Hướng dẫn: [Camera → Python](docs/CAMERA_PYTHON.md).
+
+- `firmware/testCamera/`, `firmware/testWiFi/`: các sketch camera và Wi-Fi đã chuyển từ thư mục gốc.
+- `firmware/led_test/`, `firmware/esp32_traffic_light/`: firmware đèn.
+- `python/camera_viewer.py`: nhận stream, hiển thị, nhấn S lưu ảnh.
+- `docs/hardware/`: ảnh phần cứng.
+- `data/snapshots/`: ảnh chụp, không đưa lên Git.
+
+---
 
 # IoT Giao thông thông minh — Nhận dạng xe vượt đèn đỏ
 
@@ -27,20 +39,22 @@ i
 - **Python** cho xử lý video, AI, logic vi phạm và tích hợp dữ liệu.
 - Ứng dụng có giao diện để xem dữ liệu vi phạm là một phần của sản phẩm cuối. Giai đoạn đầu có thể chạy local trên laptop.
 
-### Đề xuất ban đầu, có thể xem xét lại
+### Lựa chọn hiện tại
+
+Trạng thái dưới đây được đồng bộ ngày 01/11/2026. Chi tiết và lý do trong [DECISIONS.md](docs/DECISIONS.md); phiên bản model cụ thể và OCR vẫn cần đánh giá.
 
 | Thành phần               | Phương án khởi đầu              | Ghi chú                                                                                       |
 | -------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | Mô phỏng ESP32           | Wokwi                                 | Có thể dùng trước khi có phần cứng thật                                               |
-| Đầu vào video           | Video có sẵn                        | Dễ kiểm thử và tái hiện lỗi; webcam làm sau                                            |
-| Phát hiện phương tiện | YOLO bản nhỏ phù hợp              | Kiểm tra môi trường và giấy phép model trước khi chốt                                |
+| Đầu vào video | ESP32-CAM qua HTTP/Wi-Fi | Đã test camera; Python nhận stream đang chờ kiểm thử thật |
+| Phát hiện phương tiện | YOLO bản nhỏ | Đã thống nhất hướng; chọn phiên bản/trọng số sau thử nghiệm |
 | Xử lý ảnh/video         | OpenCV                                | Đọc video, vẽ khung, cắt ảnh                                                              |
-| Tracking                   | ByteTrack hoặc SORT                  | Chọn sau khi thử nghiệm                                                                     |
-| Giao tiếp ESP32–laptop   | HTTP hoặc MQTT                       | Chưa chốt; chọn một phương án đơn giản, dễ kiểm thử                               |
+| Tracking | ByteTrack | Đã thống nhất hướng, chưa triển khai |
+| Trạng thái đèn ESP32–laptop | MQTT qua Mosquitto | Đã chốt; tách biệt với video HTTP |
 | Phát hiện biển số      | Model phát hiện biển số phù hợp | Có thể cần model riêng ngoài model nhận diện xe                                         |
 | OCR                        | EasyOCR, PaddleOCR hoặc Tesseract    | Thử trên dữ liệu thực tế trước khi chọn                                               |
-| Cơ sở dữ liệu          | SQLite trước mắt; cân nhắc MySQL | Chưa phải quyết định cố định. Chọn theo yêu cầu triển khai và tích hợp          |
-| Ứng dụng xem dữ liệu   | Streamlit local                       | Phương án nhanh để làm dashboard; có thể cân nhắc Flask/FastAPI + frontend nếu cần |
+| Cơ sở dữ liệu | SQLite, ảnh lưu riêng | Đã thống nhất cho bản local |
+| Ứng dụng xem dữ liệu | Streamlit local | Đã thống nhất cho bản đầu |
 | Quản lý mã nguồn       | Git/GitHub                            | Không đưa mật khẩu, token hoặc dữ liệu nhạy cảm lên repo                            |
 
 Không tự ý thay đổi yêu cầu bắt buộc dùng Arduino IDE. Những lựa chọn công nghệ còn lại cần được đánh giá và ghi lại lý do trước khi đổi.
@@ -51,12 +65,12 @@ Không tự ý thay đổi yêu cầu bắt buộc dùng Arduino IDE. Những l�
 ESP32 + 3 LED
     |
     | Trạng thái RED / YELLOW / GREEN
-    | (HTTP hoặc MQTT — cần chốt sau khi đánh giá)
+    | MQTT qua Mosquitto trên laptop — đã chốt
     v
-Chương trình Python trên laptop <--- Video / webcam
+Chương trình Python trên laptop <--- ESP32-CAM (HTTP stream)
     |
     +--> OpenCV đọc video
-    +--> YOLO phát hiện phương tiện
+    +--> YOLO bản nhỏ phát hiện phương tiện (chưa chọn phiên bản)
     +--> Tracking gán ID phương tiện
     +--> Kiểm tra phương tiện đi qua vạch dừng
     +--> Đối chiếu trạng thái đèn và thời gian
@@ -77,11 +91,13 @@ Toàn bộ xử lý AI nên chạy local trên laptop ở giai đoạn đầu. C
 - 1 LED đỏ, 1 LED vàng, 1 LED xanh.
 - Điện trở phù hợp, breadboard và dây jumper.
 - Laptop để chạy Python, AI, cơ sở dữ liệu và ứng dụng.
-- Video giao thông có sẵn; webcam là tùy chọn ở giai đoạn đầu.
+- ESP32-CAM làm nguồn hình hiện tại; video có sẵn có thể dùng để kiểm thử lặp lại.
 
 Không cần bổ sung cảm biến siêu âm, hồng ngoại hoặc cảm biến ánh sáng cho phiên bản lõi nếu chưa có yêu cầu cụ thể. ESP32 đã biết trạng thái LED do chính nó điều khiển nên không cần LDR để suy ra màu đèn.
 
 ## 6. Lộ trình triển khai
+
+Các mục dưới mô tả phạm vi chức năng. Thứ tự triển khai và tiến độ hiện tại theo [DINH_HUONG_DU_AN.md](docs/DINH_HUONG_DU_AN.md): hoàn tất camera → Python trước, sau đó nhận diện xe và tracking.
 
 ### Giai đoạn 1 — Đèn giao thông
 
@@ -106,7 +122,7 @@ Không cần bổ sung cảm biến siêu âm, hồng ngoại hoặc cảm biế
 
 ### Giai đoạn 4 — Kết nối trạng thái đèn
 
-- Chốt HTTP hoặc MQTT sau khi so sánh độ phức tạp và nhu cầu.
+- Dùng MQTT đã chốt để truyền trạng thái đèn qua Mosquitto.
 - ESP32 gửi trạng thái và thời điểm chuyển trạng thái.
 - Python nhận trạng thái đèn và đồng bộ timestamp.
 - Nếu mất kết nối hoặc trạng thái không đáng tin cậy, đánh dấu `UNKNOWN`; không tự suy đoán là đèn đỏ.
@@ -200,7 +216,7 @@ Các thành viên cần thống nhất giao diện giữa module, định dạng
 
 ## 11. Cách chạy dự án
 
-Các lệnh cài đặt/chạy chính xác sẽ được bổ sung sau khi chọn thư viện, phiên bản Python, giao thức và database. Không nên viết lệnh giả định trước khi kiểm tra môi trường và mã nguồn thực tế.
+Phần camera đã có lệnh cài đặt và chạy tại [CAMERA_PYTHON.md](docs/CAMERA_PYTHON.md). Phần đèn/MQTT xem [README firmware](firmware/esp32_traffic_light/README.md). Các module AI, database và giao diện chưa triển khai.
 
 ## 12. Quy trình làm việc
 
