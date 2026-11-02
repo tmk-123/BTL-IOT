@@ -4,6 +4,18 @@
 
 Hướng dẫn: [Camera → Python](docs/CAMERA_PYTHON.md).
 
+Nhận diện xe: [YOLO trên ảnh/video và ESP32-CAM](docs/YOLO.md).
+
+Theo dõi xe và sự kiện qua vạch: [ByteTrack + vạch dừng](docs/TRACKING.md).
+
+Trạng thái đèn: [MQTT → Python và ghép sự kiện](docs/MQTT_PYTHON.md). Tiến độ có bằng chứng: [CHECKLIST.md](CHECKLIST.md).
+
+Logic nghi vượt đèn đỏ và demo 14 tình huống: [RED_LIGHT_LOGIC.md](docs/RED_LIGHT_LOGIC.md).
+
+Lưu sự kiện và ảnh bằng chứng: [SQLite + JPEG](docs/STORAGE.md).
+
+Xem dữ liệu trên trình duyệt laptop: [Giao diện Streamlit](docs/DASHBOARD.md).
+
 - `firmware/testCamera/`, `firmware/testWiFi/`: các sketch camera và Wi-Fi đã chuyển từ thư mục gốc.
 - `firmware/led_test/`, `firmware/esp32_traffic_light/`: firmware đèn.
 - `python/camera_viewer.py`: nhận stream, hiển thị, nhấn S lưu ảnh.
@@ -216,7 +228,7 @@ Các thành viên cần thống nhất giao diện giữa module, định dạng
 
 ## 11. Cách chạy dự án
 
-Phần camera đã có lệnh cài đặt và chạy tại [CAMERA_PYTHON.md](docs/CAMERA_PYTHON.md). Phần đèn/MQTT xem [README firmware](firmware/esp32_traffic_light/README.md). Các module AI, database và giao diện chưa triển khai.
+Phần camera đã có lệnh cài đặt và chạy tại [CAMERA_PYTHON.md](docs/CAMERA_PYTHON.md). Nhận diện xe YOLOv8n đã có bản thử trên ảnh/video/camera theo [YOLO.md](docs/YOLO.md). ByteTrack và sự kiện qua vạch có tại [TRACKING.md](docs/TRACKING.md). Nhận trạng thái đèn và ghép sự kiện: [MQTT_PYTHON.md](docs/MQTT_PYTHON.md), đã test phần mềm/broker local, chờ kiểm tra chung trên mạch thật. Lưu dữ liệu/ảnh đã có tại [STORAGE.md](docs/STORAGE.md), giao diện xem local tại [DASHBOARD.md](docs/DASHBOARD.md). Phần ESP32 xem [README firmware](firmware/esp32_traffic_light/README.md). OCR chưa triển khai.
 
 ## 12. Quy trình làm việc
 

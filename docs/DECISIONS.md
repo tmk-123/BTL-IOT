@@ -84,6 +84,54 @@ Trạng thái: **BẮT BUỘC**, **ĐÃ CHỐT**, **ĐÃ THỐNG NHẤT HƯỚNG
 - Đây là cấu hình mẫu cho ESP32 DevKit, chưa được người dùng xác nhận đấu dây và kiểm thử.
 - Camera và đèn có sketch riêng. Trước khi ghép phải xác nhận board, nguồn, chân thực tế; không dùng GPIO mẫu của DevKit cho ESP32-CAM khi chưa kiểm tra xung đột.
 
+## Cập nhật thử nghiệm 02/11/2026 — nhận diện xe
+
+- Người dùng yêu cầu triển khai nhận diện xe; thử Ultralytics YOLOv8n pretrained COCO, chưa chốt trọng số cuối cùng. Model lớn hơn được cân nhắc nhưng để sau khi đo bản nano trên CPU.
+- Thêm đầu vào video/ảnh local và camera HTTP; tiếp tục dùng `/capture` vì `/stream` đã kết nối TCP nhưng không trả dữ liệu. Người dùng đã xác nhận lưu ảnh từ `/capture`.
+- Môi trường máy hiện tại đã cài Python 3.12, thay cho ghi nhận Python 3.13 trước đây.
+- Mã nguồn/trọng số Ultralytics: AGPL-3.0 hoặc Enterprise; nguồn và điều khoản dữ liệu được liên kết tại [YOLO.md](YOLO.md). Không tự thay giấy phép repository.
+- Chỉ triển khai detection; ByteTrack, crossing và OCR để các mốc sau. Đánh giá lại model/confidence khi có xe mô hình và video của nhóm.
+
+## Cập nhật tiếp 02/11/2026 — ByteTrack và vạch dừng
+
+- Theo yêu cầu làm mốc tiếp theo, dùng ByteTrack đã thống nhất, cấu hình Ultralytics `bytetrack.yaml` và `persist=True`. Không đổi sang tracker khác.
+- Thêm `--track` vào chương trình có sẵn, không tạo luồng đọc camera thứ hai. LAP được khai báo trong requirements để cài trước.
+- Vạch là đoạn thẳng cấu hình theo tỷ lệ ảnh, dùng tâm đáy bbox làm điểm kiểm tra. So với chỉ kiểm tra bbox chạm vạch, yêu cầu đổi phía qua nhiều frame để xác định lượt qua. Deadband mặc định 5 pixel và giới hạn gap 5 frame là cấu hình thử, có thể thay qua CLI.
+- JSONL ghi sự kiện crossing với ID phiên chạy và ID xe; đây là log tạm trước SQLite, không thay quyết định D-04. Trạng thái đèn luôn UNKNOWN, chưa phân loại vi phạm. Thời điểm ghi là frame xác nhận, chưa có đồng bộ video/đèn.
+- Kiểm thử và giới hạn được ghi tại [TRACKING.md](TRACKING.md); cần đánh giá lại gap/deadband/góc quay trên dữ liệu thật và khi có xe mô hình.
+
+## Cập nhật tiếp 02/11/2026 — nhận đèn MQTT và phân loại crossing
+
+- Theo yêu cầu làm mốc tiếp theo, giữ giao thức MQTT và firmware hiện có. Thêm Paho MQTT 2.x cho Python, sử dụng callback API VERSION2, reconnect/resubscribe tự động. Tài liệu chính thức: https://eclipse.dev/paho/clients/python/docs/ .
+- Dùng monotonic trên laptop để quản lý độ mới và lịch sử trạng thái; không suy từ đồng hồ chạy video ghi sẵn sang đèn hiện tại. Timeout 1.5 giây là mặc định thử có thể cấu hình, chưa chốt sau đo thực tế.
+- Chỉ phân loại nghi vượt đèn đỏ nếu khoảng từ điểm ổn định trước vạch tới frame xác nhận, mở rộng 0.5 giây phía trước, có dữ liệu đỏ liên tục và đúng chiều. Khác với chỉ lấy màu đèn lúc xử lý xong, cách này tránh dùng màu mới cho frame cũ trong nhiều tình huống; chưa thay thế đồng bộ phơi sáng camera/đèn. Khoảng dự phòng 0.5 giây cũng là cấu hình thử.
+- Từ chối retained state, dữ liệu sai, trạng thái thiếu/hết hạn; disconnect/offline về UNKNOWN, reconnect cần trạng thái mới. History giới hạn 1000 bản tin; khoảng không còn lịch sử không được xác nhận.
+- Giữ JSONL cho log tạm, thêm assessment; SQLite/OCR là mốc sau. MQTT topic thật không dùng cho simulator: demo dùng `demo/inter1/light`, broker thử chỉ loopback:18884. Không thay đổi xác thực broker LAN hay cấu hình firewall tự động.
+- 28 kiểm thử đạt, trong đó 1 bài broker Mosquitto thật; chi tiết tại [CHECKLIST.md](../CHECKLIST.md). Không sửa/nạp firmware, chưa xác nhận camera/ESP32 đèn chạy chung.
+
 ## Cách sửa nhật ký
 
+### Bổ sung 02/11/2026 — logic đèn đỏ có giải thích
+
+- Giữ chính sách nghi vi phạm dựa trên crossing đúng chiều và đỏ liên tục; đưa việc mở rộng khoảng thời gian/lý do vào `assess_crossing` để camera và demo dùng cùng hàm.
+- JSONL bổ sung `assessment_reason`, không đổi giao thức MQTT, firmware hay kiến trúc lưu trữ.
+- Thêm demo 14 tình huống theo thời gian giả lập, không giả làm kiểm thử camera/ESP32 thật. 33 unittest đạt; video YOLO/ByteTrack tổng hợp vẫn ghi 1 crossing UNKNOWN/unverified khi không có nguồn đèn.
+- Kiểm tra trên phần cứng và hiệu chỉnh thời gian vẫn để chưa hoàn thành trong CHECKLIST.md.
+
 Ghi ngày, vấn đề, phương án cân nhắc, kết luận, lý do, đánh đổi và điều kiện xem xét lại. Đánh dấu rõ nội dung người dùng đã xác nhận; giữ phần chưa quyết định ở trạng thái đề xuất.
+
+## Bổ sung 02/11/2026 — SQLite và ảnh bằng chứng
+
+- Theo yêu cầu làm mốc tiếp theo, triển khai D-04: SQLite qua sqlite3 sẵn trong Python, JPEG riêng và đường dẫn trong database. Không thêm server database hay thay firmware.
+- Mọi crossing được lưu metadata; mặc định chỉ suspected_red_light lưu ba ảnh (gốc/có khung/cắt xe). `--save-all-evidence` phục vụ kiểm thử, giữ nguyên kết quả phân loại.
+- SQLite là dữ liệu chính, JSONL tiếp tục làm log phụ. event_id khóa duy nhất bảo đảm ghi lại cùng ID không thêm bản ghi/ảnh; không khử trùng giữa phiên khác nhau hoặc ID tracking bị đổi.
+- Ghi ảnh tạm rồi đổi tên thư mục trước khi commit; lỗi ghi/INSERT thông thường rollback và dọn file do lần gọi đó tạo. Chưa bảo đảm giao dịch xuyên SQLite/filesystem khi mất điện; đường dẫn ảnh tuyệt đối cần điều chỉnh khi di chuyển dữ liệu. Chi tiết tại STORAGE.md.
+- Đã thử 9 tests storage và video YOLO/ByteTrack 41 frame: 1 crossing UNKNOWN, 3 ảnh khi bật lưu mọi crossing. Tổng bộ kiểm thử 42 bài đạt; chưa xác nhận trường hợp đỏ trên camera/LED thật.
+
+## Bổ sung 02/11/2026 — Streamlit xem dữ liệu local
+
+- Triển khai D-05 bằng Streamlit, dùng lại SQLite/ảnh của D-04; local-only theo hướng kiến trúc đã thống nhất, không publish Sites/cloud hay thay firmware.
+- Làm giao diện tra cứu trước OCR vì dữ liệu sự kiện/ảnh đã sẵn sàng kiểm tra; model biển số và OCR vẫn chưa chốt/triển khai. Không thêm biển số giả vào giao diện.
+- SQLite mở mode=ro, truy vấn có tham số, bộ lọc và thống kê cùng transaction đọc. Phân trang, CSV chỉ trang đang xem, refresh thủ công để tránh cache dữ liệu cũ.
+- 6 kiểm thử dashboard đạt gồm Streamlit AppTest; máy chủ local HTTP 200/health OK. Tổng 48 bài đạt. Chưa kiểm tra trực quan bằng trình duyệt hoặc cùng luồng camera/đèn thật.
+- API/kiểm thử theo tài liệu chính thức: https://docs.streamlit.io/develop/api-reference/app-testing/st.testing.v1.apptest .

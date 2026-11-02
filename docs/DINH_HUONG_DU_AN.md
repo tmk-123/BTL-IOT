@@ -1,8 +1,12 @@
 # Định hướng và tiến độ dự án
 
-Cập nhật: **01/11/2026**. Đọc file này để biết đang làm đến đâu; xem [DECISIONS.md](DECISIONS.md) để biết lựa chọn kỹ thuật và lý do.
+Cập nhật: **02/11/2026**. Đọc file này để biết đang làm đến đâu; xem [DECISIONS.md](DECISIONS.md) để biết lựa chọn kỹ thuật và lý do.
+
+Ghi nhận mới 02/11: người dùng đã xem/lưu ảnh qua `/capture`. MJPEG `:81/stream` vẫn timeout, chưa hoàn tất kiểm thử stream 5–10 phút và mất kết nối. Đã thêm YOLOv8n và ByteTrack/vạch dừng; hướng dẫn tại [YOLO.md](YOLO.md) và [TRACKING.md](TRACKING.md). Đã thêm nhận/ghép trạng thái đèn theo [MQTT_PYTHON.md](MQTT_PYTHON.md), SQLite và ảnh theo [STORAGE.md](STORAGE.md). Kiểm thử phần mềm/broker local/video tổng hợp đạt, chờ thử chung trên mạch thật. OCR và ứng dụng chưa triển khai. Theo dõi bằng [CHECKLIST.md](../CHECKLIST.md).
 
 ## 1. Mục tiêu bàn giao
+
+Cập nhật bổ sung trong ngày: giao diện Streamlit local đã có bộ lọc, thống kê và xem ảnh SQLite theo [DASHBOARD.md](DASHBOARD.md), 6 tests dashboard đạt (tổng 48). Phần ứng dụng xem dữ liệu đã triển khai bản thử; OCR vẫn chưa triển khai. Chưa xác nhận demo toàn luồng trên phần cứng thật.
 
 Xây dựng mô hình phát hiện xe đi qua vạch dừng khi đèn đỏ, lưu ảnh bằng chứng và kết quả nhận dạng biển số để tra cứu trên ứng dụng local.
 
@@ -36,8 +40,8 @@ Firmware hiện tách sketch camera và sketch đèn. Việc đấu mạch thự
 | Nguồn hình hiện tại  | ESP32-CAM, stream HTTP qua Wi-Fi         | Camera đã test; đang kiểm tra đường truyền vào Python        |
 | Trạng thái đèn       | MQTT, Mosquitto trên laptop             | Đã chốt giao thức; chưa xác nhận test phần cứng thành công |
 | Nhận diện và tracking | YOLO bản nhỏ + ByteTrack               | Thống nhất hướng; chưa chọn phiên bản/model cụ thể          |
-| Lưu dữ liệu           | SQLite, ảnh nằm trong thư mục riêng | Thống nhất cho bản local; chưa triển khai                        |
-| Giao diện               | Streamlit local                          | Thống nhất cho bản đầu; chưa triển khai                        |
+| Lưu dữ liệu | SQLite, ảnh nằm trong thư mục riêng | Đã có bản chạy thử và 9 kiểm thử storage; xem STORAGE.md |
+| Giao diện | Streamlit local | Đã có bản thử, AppTest đạt; chờ kiểm tra trình duyệt và buổi demo thực tế |
 | Biển số và OCR        | Chưa chốt công cụ/model              | Thử trên ảnh thật trước khi chọn                               |
 
 Chi tiết, phương án thay thế và điều kiện xem xét lại nằm trong [nhật ký quyết định](DECISIONS.md).
@@ -49,9 +53,14 @@ Chi tiết, phương án thay thế và điều kiện xem xét lại nằm tron
 | Camera và Wi-Fi                                    | Đã test theo xác nhận của người dùng | Người dùng xác nhận testCamera xong                           |
 | Sắp xếp mã nguồn                                | Đã làm                                    | Sketch nằm trong firmware, ảnh phần cứng trong docs/hardware   |
 | Python nhận hình, FPS, S lưu ảnh, Q thoát      | Đã có code                                | Đã kiểm tra lưu JPG/thoát/lỗi mở kết nối bằng mô phỏng |
-| Stream camera thật vào Python                     | Chờ kiểm thử                              | Cần IP camera và chạy thử trên cùng Wi-Fi                    |
+| Camera thật vào Python | Đã lưu ảnh qua /capture | Người dùng xác nhận; MJPEG /stream vẫn timeout, chưa kiểm tra đầy đủ mất kết nối/chạy dài |
 | LED và MQTT                                        | Đã có firmware/cấu hình                 | Chưa có xác nhận chạy thành công trên mạch thật          |
-| AI, tracking, vượt vạch, OCR, SQLite, ứng dụng | Chưa triển khai                            | Là các mốc tiếp theo                                           |
+| Nhận diện xe YOLOv8n | Đã có bản thử | Nhận 1 bus trên ảnh mẫu; đọc hết video thử 5 frame; camera /capture suy luận 3 frame; xem YOLO.md |
+| ByteTrack và vạch dừng | Đã có bản thử | 11 unit tests đạt; video tổng hợp 41 frame giữ ID 1 và sinh 1 crossing; chưa đánh giá video thực |
+| Nhận/ghép trạng thái đèn MQTT | Đã có bản thử | 16 unit tests và 1 bài tích hợp Mosquitto thật đạt; chưa xác nhận chung với camera/LED thật |
+| SQLite và ảnh bằng chứng | Đã có bản thử | 9 tests storage đạt; lưu/đọc 1 crossing và 3 ảnh từ video tổng hợp; chờ thử camera/đèn thật |
+| Giao diện Streamlit | Đã có bản thử | 6 tests dashboard đạt; localhost HTTP 200/health OK |
+| OCR | Chưa triển khai | Cần chọn model và dữ liệu biển số thực |
 
 “Có code” không đồng nghĩa “đã chạy thành công trên phần cứng”. Chỉ cập nhật hoàn thành sau khi có kết quả kiểm thử thực tế.
 

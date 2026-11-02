@@ -34,6 +34,13 @@ Thay IP ví dụ bằng IP thật. Không cần activate môi trường khi gọ
 4. Tắt nguồn camera, kiểm tra chương trình báo mất stream.
 
 Nếu không mở được: kiểm tra IP mới, nguồn, Wi-Fi, cổng 81 và đóng stream khác.
+Nếu `/capture` vẫn trả ảnh nhưng `:81/stream` bị timeout, có thể tạm lấy từng ảnh liên tiếp:
+
+```powershell
+.\.venv\Scripts\python.exe python/camera_viewer.py --snapshot --url http://<IP_CAMERA>/capture
+```
+
+Chế độ này vẫn hỗ trợ S lưu ảnh và Q thoát, nhưng không phải stream MJPEG và không xác nhận stream đã hoạt động ổn định.
 Firmware khởi động ở QVGA 320×240; chỉnh ánh sáng, góc quay và độ phân giải trên trang camera nếu cần. Bước này chưa bảo đảm chất lượng đọc biển số.
 
 Chương trình hiện chưa có AI hoặc kết luận vi phạm. Bước tiếp theo là nhận diện xe.

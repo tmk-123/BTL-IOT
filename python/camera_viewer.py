@@ -5,23 +5,49 @@ from datetime import datetime
 from pathlib import Path
 import time
 from urllib.parse import urlparse
+from urllib.request import ProxyHandler, build_opener
 
 import cv2
+import numpy as np
+
+
+class SnapshotCapture:
+    """Read successive JPEG snapshots when the MJPEG endpoint is unavailable."""
+
+    def __init__(self, url):
+        self.url = url
+        self.opener = build_opener(ProxyHandler({}))
+
+    def read(self):
+        try:
+            with self.opener.open(self.url, timeout=5) as response:
+                data = response.read(5_000_001)
+            if len(data) > 5_000_000:
+                raise ValueError("Snapshot exceeds 5 MB")
+            frame = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
+            return frame is not None, frame
+        except (OSError, ValueError) as exc:
+            print(f"Cannot read snapshot: {exc}")
+            return False, None
+
+    def release(self):
+        self.opener.close()
 
 
 def main():
     parser = argparse.ArgumentParser(description="ESP32-CAM -> OpenCV (S: save, Q: quit)")
     parser.add_argument("--url", required=True, help="Example: http://192.168.1.10:81/stream")
+    parser.add_argument("--snapshot", action="store_true", help="Repeatedly fetch JPEGs; use --url http://<IP>/capture")
     parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parents[1] / "data" / "snapshots")
     args = parser.parse_args()
     if urlparse(args.url).scheme not in ("http", "https") or not urlparse(args.url).hostname:
         parser.error("--url must be an HTTP stream URL")
 
     window = "ESP32-CAM | S: save | Q: quit"
-    cap = cv2.VideoCapture()
+    cap = SnapshotCapture(args.url) if args.snapshot else cv2.VideoCapture()
     try:
         print(f"Connecting: {args.url}")
-        opened = cap.open(args.url, cv2.CAP_FFMPEG, [
+        opened = args.snapshot or cap.open(args.url, cv2.CAP_FFMPEG, [
             cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000,
             cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000,
         ])
