@@ -28,6 +28,11 @@ Camera thật (thay IP nếu đổi):
 2. Nhấn Enter để xác nhận và bắt đầu chạy.
 3. Nhấn R nếu muốn xóa hai điểm để chọn lại; Q/Escape để hủy.
 
+Ảnh được phóng vừa khung ban đầu tối đa 1000 × 700 và có thể kéo giãn cửa sổ.
+Sau lần bấm đầu tiên, ảnh chủ động tạm dừng để đặt vạch chính xác: dòng `PAUSED`
+nhắc nhấn Enter để chạy nhận diện, hoặc R để xem camera trực tiếp và chọn lại.
+Phóng ảnh không làm tăng độ phân giải thật của camera.
+
 Với camera: dùng `--source http://<IP>/capture --snapshot --select-line`. Camera phải gửi được ảnh trước khi chọn vạch; lựa chọn này không sửa lỗi timeout mạng.
 
 Tọa độ được in trong terminal dưới dạng `--track --line ...` để dùng lại lần sau, chưa tự lưu cấu hình. Với video mẫu trên máy hiện tại, có thể thử:

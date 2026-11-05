@@ -1,5 +1,12 @@
 # Checklist dự án — cập nhật 02/11/2026
 
+## Bổ sung 03/11 — chưa có đèn thật
+
+- [x] Bảng điều khiển đèn giả lập qua MQTT loopback, tự tạo/dọn broker riêng, nút xanh/đỏ/vàng/ngừng heartbeat.
+- [x] Camera chọn vạch có hình trực tiếp trước click đầu tiên; đầu vào demo lưu riêng, có cờ/ảnh SIMULATION và preset dashboard.
+- [x] Pipeline HTTP/video fixture + YOLO/ByteTrack + MQTT thật: xanh/đỏ/UNKNOWN phân loại đúng, mỗi lượt có 1 crossing. 82 tests toàn repo đạt và 1 test bổ sung reset crossing khi mất ảnh đạt.
+- [ ] Người dùng căn ESP32-CAM vào video, chọn vạch và thử xanh/đỏ/ngừng gửi trên camera vật lý. Xem [MO_PHONG_KHONG_DEN.md](docs/MO_PHONG_KHONG_DEN.md).
+
 `[x]` = có bằng chứng đã làm/đã kiểm thử như ghi bên cạnh. `[ ]` = chưa làm hoặc chưa được xác nhận; có code không đồng nghĩa đã chạy trên mạch thật.
 
 ## 1. Camera
@@ -80,7 +87,17 @@
 
 ## 8. Chưa triển khai
 
-- [ ] Phát hiện biển số và OCR.
+- [x] Công cụ test riêng phát hiện biển số/OCR bằng model ONNX có sẵn, CPU; ảnh mẫu đọc `5AU5341`, lưu JPG/JSON (03/11/2026). Xem [BIEN_SO.md](docs/BIEN_SO.md).
+- [x] Thử nhanh 4 ảnh Việt Nam có sẵn: phát hiện 10 vùng, đối chiếu ảnh thấy OCR khớp ở các vùng này, gồm biển xe máy hai dòng; cảnh đông xe còn bỏ sót biển nhỏ. Không phải benchmark độc lập (03/11/2026).
+- [x] Thêm đầu vào video local cho ALPR: xuất MP4 có khung/chữ, JSONL từng frame, summary và ảnh mẫu; 2 bài kiểm thử đọc/ghi/giới hạn frame và file lỗi đạt (03/11/2026). Xem bước 3 trong BIEN_SO.md.
+- [x] Chạy video giao thông Việt Nam có sẵn: đủ 835 frame, 477 frame có phát hiện biển; khoảng 133 giây xử lý / 27.86 giây video (6.27 FPS CPU). Đã đối chiếu biển đầu `29A33185`; OCR có lỗi giữa các frame, chưa benchmark độ chính xác toàn bộ.
+- [x] Ổn định OCR trong công cụ ALPR riêng: ghép bbox biển, cửa sổ 15 quan sát, ít nhất 5 phiếu/60%, thiếu bằng chứng hiện PENDING; giữ raw/stable và tracks.json. 9 kiểm thử ALPR và HTTP snapshot/Tk thật đạt (03/11/2026).
+- [x] Chạy lại đủ 835 frame: 12 track vùng biển, 5 track có đồng thuận; 5 chuỗi đã đối chiếu ảnh cắt khớp. Chưa phải số xe/độ chính xác toàn cảnh, chưa ghép với ID ByteTrack của luồng xe.
+- [ ] Đánh giá biển Việt Nam một/hai dòng bằng camera thật, ghi tỷ lệ đọc đúng và lỗi.
+- [x] Ghép OCR theo ID xe ByteTrack và lấy kết quả lúc crossing; lưu SQLite/ảnh biển, Streamlit có cột/tìm kiếm/CSV/ảnh và đọc được database cũ (03/11/2026).
+- [x] Scanner camera tự lưu khi phát hiện vào `data/plates/`, giữ ảnh PENDING và ảnh xác nhận chung một thư mục theo lần xuất hiện, hạn chế lặp theo track; 5 tests tự lưu và HTTP/Tk/model thật không bấm S đạt (03/11/2026).
+- [x] Video mẫu 150 frame qua toàn luồng: 3 crossing UNKNOWN/unverified, 1 sự kiện có `29A33185`; khoảng 4.12 FPS CPU. 66 tests đạt, Streamlit AppTest dữ liệu thật và HTTP health đạt.
+- [ ] Camera + ESP32 đèn thật chạy chung, đo trễ/đọc biển tại thời điểm crossing, kiểm tra bố cục UI bằng trình duyệt.
 - [ ] Demo toàn luồng, ghi kết quả và giới hạn vào báo cáo.
 
 ## Cách kiểm tra nhanh

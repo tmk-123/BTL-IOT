@@ -12,6 +12,10 @@ Trạng thái: **BẮT BUỘC**, **ĐÃ CHỐT**, **ĐÃ THỐNG NHẤT HƯỚNG
 
 ## D-01 — MQTT cho trạng thái đèn: ĐÃ CHỐT
 
+- Bổ sung 03/11: người dùng chưa có đèn, yêu cầu chạy mô phỏng. Thêm bảng Tk điều khiển đèn MQTT giả lập, broker chỉ loopback/cổng tạm/topic và device riêng cho mỗi phiên, không sửa broker LAN hoặc firmware. So với giả màu trực tiếp trong detector, cách này kiểm tra được luồng MQTT/heartbeat/UNKNOWN thật.
+- `vehicle_detector.py --simulation` gắn cờ và nhãn lên ảnh, mặc định lưu vùng `data/demos/live_simulation`, từ chối database production. Dùng topic `demo/` hoặc device `simulation-` bắt buộc có cờ này. Giữ chặn MQTT realtime ghép video file; video chỉ được đưa qua HTTP trong bài fixture rõ ràng hoặc do camera thật quay màn hình.
+- Bộ chọn vạch camera có cập nhật hình trực tiếp trước click đầu tiên, sau đó đóng băng để chọn hai đầu; R căn lại. Khi snapshot lỗi tạm thời, xóa lịch sử crossing/OCR trước khi thử lại, không nối chuyển động qua đoạn mất quan sát. Chi tiết và bằng chứng ở [MO_PHONG_KHONG_DEN.md](MO_PHONG_KHONG_DEN.md).
+
 - Lịch sử: nhật ký Git ghi chốt ngày 12/10/2026; người dùng xác nhận lại ngày 01/11/2026.
 - Cân nhắc: HTTP polling, HTTP đẩy trạng thái, MQTT.
 - Quyết định: ESP32 điều khiển đèn publish MQTT; Mosquitto trên laptop; Python subscribe.
@@ -55,6 +59,19 @@ Trạng thái: **BẮT BUỘC**, **ĐÃ CHỐT**, **ĐÃ THỐNG NHẤT HƯỚNG
 - Đánh đổi: mức tùy biến giao diện và API; đánh giá lại nếu có yêu cầu mobile/API/giao diện vượt khả năng bản đầu.
 
 ## D-06 — Biển số và OCR: CHƯA CHỐT
+
+- Tự lưu 03/11 theo yêu cầu người dùng: camera scanner mặc định lưu vào `data/plates/` ngay khi detector thấy biển, không đợi OCR đồng thuận và không cần S. Mỗi track lưu một lần ban đầu, thêm đúng một bộ ảnh xác nhận trong cùng thư mục khi có đồng thuận; không ghi đè ảnh ban đầu hoặc lưu mỗi frame. `--no-auto-save` tắt và `--output` đổi nơi lưu. ID mất/đổi hoặc phiên mới có thể lưu lại cùng biển. Ảnh/video offline và database sự kiện giữ luồng riêng như trước.
+
+- Bổ sung 03/11/2026 theo yêu cầu lấy model/train để test camera: triển khai bản thử FastALPR 0.4.0, detector YOLOv9-t-384 ONNX và OCR CCT-XS-v2-global, CPU trong `.venv-alpr`; chưa chốt model cuối. [Nguồn, giấy phép và cách chạy](BIEN_SO.md).
+- So với train mới hoặc ghép YOLO với EasyOCR/PaddleOCR/Tesseract, bộ ONNX có sẵn giúp test ngay trên CPU/Python 3.13 khi chưa có dữ liệu gán nhãn. Đánh đổi là chưa đánh giá biển Việt Nam/hai dòng; đổi model hoặc fine-tune sau khi có ảnh thật. Giữ nguyên luồng xe/tracking/MQTT/SQLite/Streamlit hiện có.
+- Mã nguồn mang MIT; quyền weights detector/dữ liệu nguồn chưa được tác giả làm rõ hoàn toàn. Chỉ cache local, không đưa weights vào repo.
+- Bổ sung test video 03/11: thêm `--video` đọc file tuần tự và xuất MP4/JSONL, không bỏ frame như luồng camera. Giữ thời gian video riêng, không ghép với trạng thái đèn MQTT hiện tại. Giữ OCR thô theo frame; chưa suy tần suất chuỗi thành số xe hoặc tự chốt biển theo đa số.
+- Bổ sung ổn định OCR 03/11: công cụ ALPR riêng ghép bbox biển theo IoU hai chiều tốt nhất (>=0.15), tách ID khi mơ hồ, hết hạn sau 0.5 giây. Cân nhắc dùng ID xe ByteTrack hiện có; để bước tích hợp vì môi trường ALPR hiện chỉ có detector biển. Không thay ByteTrack trong luồng xe/vượt vạch.
+- Chọn bỏ phiếu theo chuỗi nguyên vẹn trong 15 quan sát gần nhất (gồm cả lần OCR không hợp lệ), ít nhất 5 phiếu và tỷ lệ >=60%; confidence ký tự thấp nhất >=0.8. Lọc dạng chuỗi thường gặp ở biển Việt Nam, không tự thay O/0/B/8. Đây là heuristic thử nghiệm, chưa bao quát mọi loại biển.
+- Nếu không đủ bằng chứng hiện PENDING; phiếu cũ hết hiệu lực theo cửa sổ. Khi mất track hoặc khung chồng lấn không rõ thì tạo ID mới. So với giữ chữ lần đầu hay đa số toàn video, cách này giảm truyền chữ cũ sang biển mới; vẫn có thể nhầm ID hoặc đồng thuận trên chuỗi sai. Log giữ raw và stable riêng; `last_consensus` trong tracks.json là lịch sử, không phải kết quả hiện hành ở mọi frame. `--raw-ocr` tắt ổn định để đối chiếu.
+- Tích hợp sự kiện 03/11: thêm `--plate-ocr` vào luồng YOLO/ByteTrack hiện có, chạy detector biển trên frame và chỉ ghép khi >=90% diện tích biển nằm trong đúng một bbox xe. Nhiều xe nhận cùng biển hoặc nhiều biển trong một xe thì đánh dấu mơ hồ, xóa phiếu đang tích lũy. Mỗi ID xe có cửa sổ OCR riêng; mất ID quá `--plate-max-gap` (mặc định 0.5 giây) thì xóa. Giữ ByteTrack cho xe; lớp theo dõi biển riêng chỉ phục vụ ổn định OCR bên trong ID xe.
+- Sửa PENDING 03/11 theo ảnh người dùng: bộ lọc cũ loại `80441NN02` vì buộc chữ đứng sau đúng hai số. Bỏ ràng buộc vị trí chữ, dùng kiểm tra chuỗi OCR sơ bộ 6–12 ký tự, ít nhất 4 số và 1–4 chữ; không coi đây là xác thực định dạng pháp lý. Giữ ngưỡng confidence 0.8 và bỏ phiếu 5 lần/60%. Log/overlay bổ sung lý do chờ, confidence ký tự thấp nhất và nguyên nhân loại từng quan sát; không hạ ngưỡng để ép có kết quả.
+- Chụp kết quả OCR hiện tại đúng lúc crossing, không dùng đồng thuận xuất hiện trong tương lai hoặc tự đổi UNKNOWN thành RED. SQLite thêm cột nullable biển/trạng thái/tỷ lệ phiếu/ảnh bằng ALTER TABLE, giữ schema/dữ liệu cũ; dashboard đọc được cả database cũ chưa nâng cấp mà không sửa file. Ảnh biển cùng transaction bằng chứng hiện có; giữ policy chỉ lưu ảnh nghi đỏ hoặc `--save-all-evidence` khi thử.
 
 - Cập nhật: 01/11/2026.
 - Cần thử model phát hiện biển số và OCR trên ảnh thật, gồm biển số xe máy hai dòng nếu thuộc phạm vi demo.

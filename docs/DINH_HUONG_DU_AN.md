@@ -1,5 +1,17 @@
 # Định hướng và tiến độ dự án
 
+**Mô phỏng không đèn 03/11:** đã thêm bảng đèn Xanh/Đỏ/Vàng/Ngừng gửi qua MQTT thật, chọn vạch trên camera có cập nhật trực tiếp, lưu sự kiện/ảnh có nhãn mô phỏng riêng và nguồn xem trong dashboard. Ba bài pipeline HTTP/video fixture kiểm tra xanh/đỏ/UNKNOWN đạt; camera vật lý trả ảnh nhưng kết nối chưa ổn định, chờ người dùng căn vào video và chọn vạch. Hướng dẫn: [MO_PHONG_KHONG_DEN.md](MO_PHONG_KHONG_DEN.md).
+
+**Bổ sung 03/11/2026:** đã tải detector biển số YOLOv9-t và OCR CCT-XS ONNX, thêm `python/plate_scanner.py` cho ESP32-CAM `/capture`/stream, webcam và ảnh. Đã chạy CPU trên ảnh mẫu, lưu JPG/JSON và đọc được `5AU5341`; chưa kiểm thử biển Việt Nam/camera thật, chưa ghép OCR vào SQLite/Streamlit. Xem [BIEN_SO.md](BIEN_SO.md).
+
+**Kiểm thử tiếp 03/11:** đã chạy thêm 4 ảnh Việt Nam có sẵn, phát hiện 10 vùng biển (có biển xe máy hai dòng), đối chiếu trực quan OCR khớp ở các vùng tìm thấy; cảnh đông xe còn bỏ sót biển nhỏ. Đây là thử nhanh, chưa phải benchmark hoặc kiểm thử camera thật. Kết quả và lệnh chạy lại trong BIEN_SO.md.
+
+**Video 03/11:** thêm `--video`, xuất MP4/JSONL/summary và chạy đủ 835 frame của video giao thông Việt Nam có sẵn. 477 frame có biển được phát hiện, khoảng 6.27 FPS CPU; OCR còn dao động/sai khi biển mờ. Chưa ghép tracking OCR/sự kiện hoặc xác nhận thời gian thực. Xem bước 3 trong BIEN_SO.md.
+
+**Ổn định OCR 03/11:** đã thêm theo dõi vùng biển riêng và bỏ phiếu theo cửa sổ, PENDING khi thiếu bằng chứng, log raw/stable. Chạy lại 835 frame có 5 chuỗi đồng thuận khớp ảnh cắt, 9 kiểm thử ALPR đạt và snapshot/Tk local đạt. Chưa ghép ID xe ByteTrack/sự kiện/SQLite. Xem bước 4 trong BIEN_SO.md.
+
+**Tích hợp sự kiện 03/11:** đã ghép biển với ID xe ByteTrack bằng `--plate-ocr`, lưu biển/trạng thái/ảnh vào SQLite và xem/tìm trong Streamlit. Chạy 150 frame đầu video mẫu: 3 crossing UNKNOWN/unverified, trong đó ID 1 có biển `29A33185`, hai sự kiện còn lại chưa có biển ổn định. 66 kiểm thử đạt; preset **Video biển số** có dữ liệu để xem. Camera + đèn thật vẫn chờ kiểm thử. Xem bước 5 trong BIEN_SO.md.
+
 Cập nhật: **02/11/2026**. Đọc file này để biết đang làm đến đâu; xem [DECISIONS.md](DECISIONS.md) để biết lựa chọn kỹ thuật và lý do.
 
 Ghi nhận mới 02/11: người dùng đã xem/lưu ảnh qua `/capture`. MJPEG `:81/stream` vẫn timeout, chưa hoàn tất kiểm thử stream 5–10 phút và mất kết nối. Đã thêm YOLOv8n và ByteTrack/vạch dừng; hướng dẫn tại [YOLO.md](YOLO.md) và [TRACKING.md](TRACKING.md). Đã thêm nhận/ghép trạng thái đèn theo [MQTT_PYTHON.md](MQTT_PYTHON.md), SQLite và ảnh theo [STORAGE.md](STORAGE.md). Kiểm thử phần mềm/broker local/video tổng hợp đạt, chờ thử chung trên mạch thật. OCR và ứng dụng chưa triển khai. Theo dõi bằng [CHECKLIST.md](../CHECKLIST.md).
@@ -60,7 +72,7 @@ Chi tiết, phương án thay thế và điều kiện xem xét lại nằm tron
 | Nhận/ghép trạng thái đèn MQTT | Đã có bản thử | 16 unit tests và 1 bài tích hợp Mosquitto thật đạt; chưa xác nhận chung với camera/LED thật |
 | SQLite và ảnh bằng chứng | Đã có bản thử | 9 tests storage đạt; lưu/đọc 1 crossing và 3 ảnh từ video tổng hợp; chờ thử camera/đèn thật |
 | Giao diện Streamlit | Đã có bản thử | 6 tests dashboard đạt; localhost HTTP 200/health OK |
-| OCR | Chưa triển khai | Cần chọn model và dữ liệu biển số thực |
+| OCR | Đã có công cụ thử riêng ngày 03/11 | Model ONNX chạy ảnh mẫu thành công; cần camera/biển Việt Nam và tích hợp sự kiện |
 
 “Có code” không đồng nghĩa “đã chạy thành công trên phần cứng”. Chỉ cập nhật hoàn thành sau khi có kết quả kiểm thử thực tế.
 

@@ -19,6 +19,7 @@ from line_selector import select_line
 from mqtt_light import add_mqtt_arguments, from_arguments
 from light_state import assess_crossing
 from event_store import EventStore
+from vehicle_plate import VehiclePlateReader, empty_plate
 
 ROOT = Path(__file__).resolve().parents[1]
 VEHICLES = {"bicycle", "car", "motorcycle", "bus", "truck"}
@@ -50,6 +51,9 @@ def main():
     parser.add_argument("--max-frames", type=int, default=0, help="0 processes until EOF or Q")
     parser.add_argument("--save-last", action="store_true", help="Save the last annotated frame on completion")
     parser.add_argument("--track", action="store_true", help="ByteTrack IDs and stop-line crossing events")
+    parser.add_argument('--plate-ocr', action='store_true', help='Read plates per ByteTrack vehicle and store consensus at crossing')
+    parser.add_argument('--plate-max-gap', type=float, default=0.5, help='OCR track expiry in seconds')
+    parser.add_argument('--simulation', action='store_true', help='Mark every event as simulated; default to isolated demo storage')
     parser.add_argument("--select-line", action="store_true", help="Click two endpoints on the first frame; enables --track")
     parser.add_argument("--line", type=float, nargs=4, default=[0.15, 0.6, 0.85, 0.6],
                         metavar=("X1", "Y1", "X2", "Y2"), help="Normalized line endpoints (0..1)")
@@ -61,10 +65,23 @@ def main():
     parser.add_argument("--timing-margin", type=float, default=0.5, help="Extra lookback seconds for camera/network timing uncertainty")
     add_mqtt_arguments(parser)
     args = parser.parse_args()
+    if args.simulation:
+        demo = ROOT / 'data/demos/live_simulation'
+        if args.database == ROOT / 'data/traffic.db': args.database = demo / 'traffic.db'
+        if args.evidence_dir == ROOT / 'data/evidence': args.evidence_dir = demo / 'evidence'
+        if args.output == ROOT / 'data/detections': args.output = demo / 'logs'
+        if args.database.resolve() == (ROOT / 'data/traffic.db').resolve():
+            parser.error('Simulation must use a separate demo database')
+    if (args.mqtt_topic.startswith('demo/') or args.mqtt_device.startswith('simulation-')) and not args.simulation:
+        parser.error('Demo lamp topics/devices require --simulation')
     if args.select_line:
         args.track = True
         if args.no_display:
             parser.error("--select-line needs a display; remove --no-display")
+    if args.plate_ocr and not args.track:
+        parser.error('--plate-ocr requires --track or --select-line')
+    if not 0 < args.plate_max_gap < float('inf'):
+        parser.error('--plate-max-gap must be finite and > 0')
     if not 0 < args.conf <= 1 or args.imgsz < 32 or args.max_frames < 0:
         parser.error("Require 0 < conf <= 1, imgsz >= 32 and max-frames >= 0")
     if any(not 0 <= value <= 1 for value in args.line) or args.line[:2] == args.line[2:]:
@@ -93,6 +110,7 @@ def main():
     frame_size = None
     crossings = 0
     suspected = 0
+    camera_failures = 0
     receiver = None
     store = None
     session_id = uuid4().hex
@@ -102,6 +120,10 @@ def main():
         Path(args.model).parent.mkdir(parents=True, exist_ok=True)
         print(f"Loading {args.model} (first run may download weights)...")
         model = YOLO(args.model)
+        plate_reader = None
+        if args.plate_ocr:
+            from plate_scanner import make_model, draw_consensus
+            plate_reader = VehiclePlateReader(make_model(0.4), args.plate_max_gap)
         receiver = from_arguments(args)
         if receiver:
             receiver.start()
@@ -122,6 +144,9 @@ def main():
                     opened = cap.open(str(path))
                 if not opened:
                     raise OSError("Cannot open source; check path/IP. For ESP32-CAM try --snapshot with /capture.")
+        video_fps = cap.get(cv2.CAP_PROP_FPS) if not remote and not image else None
+        if plate_reader and not remote and (video_fps is None or not 0 < video_fps < float('inf')):
+            raise ValueError('Video FPS is required for OCR temporal voting')
         if not args.no_display:
             cv2.namedWindow(window, cv2.WINDOW_NORMAL)
         if args.track:
@@ -135,14 +160,25 @@ def main():
             else:
                 ok, frame = cap.read()
             if not ok:
+                if remote and args.snapshot:
+                    camera_failures += 1
+                    # Never bridge a crossing or OCR votes across a camera outage.
+                    crossing = None
+                    if plate_reader is not None:
+                        plate_reader.reset()
+                    if camera_failures < 3:
+                        print(f'Camera read failed; retrying ({camera_failures}/3). Crossing history reset.', flush=True)
+                        time.sleep(.3)
+                        continue
                 if remote or image or count == 0:
                     raise OSError("Cannot read frame; camera disconnected or input cannot be decoded")
                 print("End of video.")
                 break
+            camera_failures = 0
             observed_at = datetime.now().astimezone().isoformat()
             observed_mono = time.monotonic()
             if args.select_line:
-                chosen = select_line(frame)
+                chosen = select_line(frame, read_frame=cap.read if remote else None)
                 if chosen is None:
                     print("Line selection cancelled. No tracking events recorded.")
                     return 0
@@ -161,6 +197,22 @@ def main():
                 result = model.predict(frame, classes=classes, conf=args.conf,
                                        imgsz=args.imgsz, device=args.device, verbose=False)[0]
             preview = result.plot()
+            vehicles = []
+            if args.track and result.boxes.id is not None:
+                vehicles = [dict(bbox=box, track_id=identity) for box, identity in zip(
+                    result.boxes.xyxy.cpu().tolist(), result.boxes.id.int().cpu().tolist())]
+            plate_results = plate_reader.update(frame, vehicles, observed_mono if remote else (frame_index-1)/video_fps) if plate_reader else {}
+            if plate_reader:
+                preview = draw_consensus(preview, plate_reader.scene_tracks)
+                if not vehicles:
+                    cv2.putText(preview, 'No tracked vehicle: plate OCR only; crossing unavailable',
+                                (10, 105), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 180, 255), 2)
+            for vehicle in vehicles:
+                plate = plate_results.get(vehicle['track_id'])
+                if plate:
+                    x, y = round(vehicle['bbox'][0]), max(100, round(vehicle['bbox'][1])+25)
+                    cv2.putText(preview, f"Plate: {plate['plate_text'] or plate['plate_status']}", (x, y),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
             if args.track:
                 height, width = frame.shape[:2]
                 if frame_size is not None and frame_size != (width, height):
@@ -202,7 +254,16 @@ def main():
                                      "timing_margin_s": args.timing_margin,
                                      "crossing_window_s": interval_end - interval_start,
                                      "event_type": "line_crossing"}
+                            if args.simulation:
+                                event.update(simulation=True, simulation_kind='camera_with_synthetic_light')
+                            event.update(plate_results.get(track_id, empty_plate()))
+                            if plate_reader:
+                                event['plate_models'] = {'detector': 'yolo-v9-t-384-license-plate-end2end',
+                                                         'ocr': 'cct-xs-v2-global-model'}
                             evidence = preview.copy()
+                            if args.simulation:
+                                cv2.putText(evidence, 'SIMULATION - not a real violation', (10, 105),
+                                            cv2.FONT_HERSHEY_SIMPLEX, .65, (0, 255, 255), 2)
                             cv2.putText(evidence, f"ID {track_id} | {light_state} | {assessment}", (10, 25),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
                             event, inserted = store.save(event, frame, evidence, save_all=args.save_all_evidence)
@@ -215,6 +276,9 @@ def main():
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
                 cv2.putText(preview, f"Suspected red-light: {suspected}", (10, 75),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 100, 255), 2)
+                if args.simulation:
+                    cv2.putText(preview, 'SIMULATION - synthetic light', (10, 105),
+                                cv2.FONT_HERSHEY_SIMPLEX, .6, (0, 255, 255), 2)
             duration = time.perf_counter() - started
             elapsed += duration
             count += 1
@@ -239,7 +303,7 @@ def main():
         if args.track:
             print(f"Crossings: {crossings}. Event file is created on first crossing: {event_path}")
         return 0
-    except (OSError, ValueError, RuntimeError, sqlite3.Error, cv2.error) as exc:
+    except (OSError, ValueError, RuntimeError, ImportError, sqlite3.Error, cv2.error) as exc:
         print(f"Detection failed: {exc}")
         return 1
     except KeyboardInterrupt:

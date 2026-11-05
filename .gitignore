@@ -1,8 +1,11 @@
 .venv/
+.venv-alpr/
 __pycache__/
 *.pyc
+.env
+**/secrets.h
+tools/mosquitto/passwd
 data/
 models/
 runs/
-secrets.h
-tools/mosquitto/passwd
+*.pt

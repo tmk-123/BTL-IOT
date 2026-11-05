@@ -1,0 +1,5 @@
+# Separate from camera_viewer's GUI OpenCV environment; see docs/BIEN_SO.md.
+fast-alpr[onnx]==0.4.0
+open-image-models==0.6.0
+fast-plate-ocr==1.1.0
+opencv-python-headless>=4.10,<5

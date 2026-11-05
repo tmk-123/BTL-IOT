@@ -1,0 +1,3 @@
+# Combined pipeline. Use --no-display; preview standalone ALPR with Tk in .venv-alpr.
+-r requirements.txt
+-r requirements-alpr.txt

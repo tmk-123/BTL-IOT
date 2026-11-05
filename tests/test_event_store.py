@@ -116,6 +116,37 @@ class StorageTests(unittest.TestCase):
         self.assertTrue(Path(saved["raw_image"]).is_relative_to(self.images))
         self.assertEqual(len(self.rows()), 1)
 
+    def test_plate_metadata_crop_and_duplicate(self):
+        event = example_event()
+        event.update(plate_text='30A33918', plate_status='consensus', plate_vote_share=.8,
+                     plate_bbox=[20, 40, 60, 55], plate_ocr=[{'raw_text': '30A33913'}])
+        saved, inserted = self.store.save(event, self.frame, self.annotated)
+        self.assertTrue(inserted)
+        crop = cv2.imdecode(np.fromfile(saved['plate_image'], dtype=np.uint8), cv2.IMREAD_COLOR)
+        self.assertEqual(crop.shape[:2], (15, 40))
+        self.assertEqual(self.rows()[0]['plate_text'], '30A33918')
+        self.assertEqual(json.loads(self.rows()[0]['payload_json'])['plate_ocr'], event['plate_ocr'])
+        self.assertFalse(self.store.save(event)[1])
+        self.assertEqual(len(list(self.images.glob('*/*.jpg'))), 4)
+
+    def test_invalid_plate_crop_rolls_back_all_images(self):
+        event = example_event()
+        event['plate_bbox'] = [500, 500, 550, 520]
+        with self.assertRaises(ValueError):
+            self.store.save(event, self.frame, self.annotated)
+        self.assertEqual(len(self.rows()), 0)
+        self.assertEqual(list(self.images.iterdir()), [])
+
+    def test_additive_migration_keeps_old_events(self):
+        self.store.save(example_event('unverified'))
+        for name in ('plate_text', 'plate_status', 'plate_vote_share', 'plate_image'):
+            self.store.connection.execute(f'ALTER TABLE events DROP COLUMN {name}')
+        self.store.close()
+        self.store = EventStore(self.db, self.images)
+        self.assertEqual(len(self.rows()), 1)
+        self.assertIsNone(self.rows()[0]['plate_text'])
+        self.assertEqual(self.rows()[0]['plate_status'], 'not_enabled')
+
 
 if __name__ == "__main__":
     unittest.main()

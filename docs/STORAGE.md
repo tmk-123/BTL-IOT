@@ -1,5 +1,7 @@
 # Lưu sự kiện và ảnh bằng chứng
 
+**Bổ sung 03/11/2026:** EventStore đã hỗ trợ biển số, trạng thái OCR, tỷ lệ phiếu và ảnh `plate.jpg`, tự bổ sung cột trên database cũ. `vehicle_detector.py --track --plate-ocr` ghép OCR theo ID xe và chụp kết quả lúc crossing; không đọc được biển vẫn lưu sự kiện. Chi tiết, lệnh thử và kết quả thật ở bước 5 trong [BIEN_SO.md](BIEN_SO.md). Các mô tả “OCR chưa triển khai” phía dưới thuộc mốc trước ngày 03/11.
+
 Mốc này dùng SQLite có sẵn trong Python, không cần cài thêm database server. Không sửa firmware.
 
 ## Thử ngay không cần camera

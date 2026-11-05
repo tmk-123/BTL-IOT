@@ -1,5 +1,7 @@
 # Giao diện xem sự kiện bằng Streamlit
 
+**Bổ sung 03/11/2026:** đã có cột biển số/trạng thái OCR, tìm theo biển không phân biệt hoa thường, xuất CSV và ảnh cắt biển ở chi tiết. Chọn **Video biển số** để xem dữ liệu pipeline mẫu; nhập `29A33185` để xem 1 sự kiện có OCR ổn định. Cách tạo lại dữ liệu và giới hạn ở bước 5 trong [BIEN_SO.md](BIEN_SO.md). Những mục ghi “chưa có OCR” bên dưới là mô tả mốc 02/11.
+
 Chạy PowerShell tại thư mục gốc dự án:
 
 ```powershell

@@ -41,6 +41,18 @@ class EventStore:
             CREATE INDEX IF NOT EXISTS events_time ON events(observed_at);
             CREATE INDEX IF NOT EXISTS events_assessment ON events(assessment);
         """)
+        # Additive migration: keep existing events/images and support older databases.
+        self.connection.execute('BEGIN IMMEDIATE')
+        try:
+            columns = {row[1] for row in self.connection.execute('PRAGMA table_info(events)')}
+            for name, kind in {'plate_text': 'TEXT', 'plate_status': "TEXT DEFAULT 'not_enabled'",
+                               'plate_vote_share': 'REAL', 'plate_image': 'TEXT'}.items():
+                if name not in columns:
+                    self.connection.execute(f'ALTER TABLE events ADD COLUMN {name} {kind}')
+            self.connection.execute('COMMIT')
+        except BaseException:
+            self.connection.execute('ROLLBACK')
+            raise
 
     def close(self):
         self.connection.close()
@@ -68,7 +80,10 @@ class EventStore:
                 self.connection.execute("COMMIT")
                 return json.loads(existing["payload_json"]), False
             saved = dict(event)
-            saved.update(raw_image=None, annotated_image=None, vehicle_image=None)
+            saved.update(raw_image=None, annotated_image=None, vehicle_image=None, plate_image=None)
+            saved.setdefault('plate_text', None)
+            saved.setdefault('plate_status', 'not_enabled')
+            saved.setdefault('plate_vote_share', None)
             if save_all or event["assessment"] == "suspected_red_light":
                 if frame is None or annotated is None:
                     raise ValueError("Evidence requires original and annotated frames")
@@ -88,15 +103,27 @@ class EventStore:
                 self.write_jpeg(stage / "original.jpg", frame)
                 self.write_jpeg(stage / "annotated.jpg", annotated)
                 self.write_jpeg(stage / "vehicle.jpg", frame[y1:y2, x1:x2])
+                plate_box = event.get('plate_bbox')
+                if plate_box is not None:
+                    if len(plate_box) != 4 or not all(math.isfinite(value) for value in plate_box):
+                        raise ValueError('Plate crop requires a finite bbox')
+                    px1, py1 = max(0, math.floor(plate_box[0])), max(0, math.floor(plate_box[1]))
+                    px2, py2 = min(width, math.ceil(plate_box[2])), min(height, math.ceil(plate_box[3]))
+                    if px1 >= px2 or py1 >= py2:
+                        raise ValueError('Plate crop lies outside the image')
+                    self.write_jpeg(stage / 'plate.jpg', frame[py1:py2, px1:px2])
                 stage.rename(folder)
                 stage = None
                 finalized = folder
                 saved.update(raw_image=str(folder / "original.jpg"),
                              annotated_image=str(folder / "annotated.jpg"),
                              vehicle_image=str(folder / "vehicle.jpg"))
+                if plate_box is not None:
+                    saved['plate_image'] = str(folder / 'plate.jpg')
             columns = ("event_id", "session_id", "frame", "track_id", "observed_at", "vehicle_class",
                        "confidence", "direction", "light_state", "assessment", "assessment_reason", "source",
-                       "raw_image", "annotated_image", "vehicle_image")
+                       "raw_image", "annotated_image", "vehicle_image", "plate_text", "plate_status",
+                       "plate_vote_share", "plate_image")
             values = [saved[key] for key in columns]
             self.connection.execute(
                 f"INSERT INTO events ({','.join(columns)},payload_json) VALUES ({','.join('?' for _ in range(len(columns)+1))})",

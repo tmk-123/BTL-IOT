@@ -1,8 +1,12 @@
 # Chạy camera trên laptop
 
+**03/11/2026:** đã có [nhận dạng biển số trên ảnh/video/camera](docs/BIEN_SO.md), ổn định OCR và ghép biển với ID xe ByteTrack/sự kiện. SQLite và Streamlit đã có biển số, trạng thái, tìm kiếm và ảnh cắt biển. Đã chạy video Việt Nam; phần cứng chạy chung vẫn chờ kiểm thử. Xem bước 5 trong hướng dẫn để mở dữ liệu mẫu.
+
 Đọc trước: [Định hướng và tiến độ](docs/DINH_HUONG_DU_AN.md) · [Các quyết định kỹ thuật](docs/DECISIONS.md).
 
 Hướng dẫn: [Camera → Python](docs/CAMERA_PYTHON.md).
+
+Chưa có LED/ESP32 đèn? [Bài thử camera + vạch + đèn MQTT giả lập](docs/MO_PHONG_KHONG_DEN.md): có bảng nút Xanh/Đỏ/Ngừng gửi, chọn vạch trên camera và xem kết quả trong vùng dữ liệu demo.
 
 Nhận diện xe: [YOLO trên ảnh/video và ESP32-CAM](docs/YOLO.md).
 

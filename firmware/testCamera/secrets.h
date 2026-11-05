@@ -1,3 +1,3 @@
 #pragma once
-#define WIFI_SSID "Quang Anh phạm"
-#define WIFI_PASSWORD "1233456789"
+#define WIFI_SSID "Redmi"
+#define WIFI_PASSWORD "1234567@"
