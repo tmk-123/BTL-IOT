@@ -1,5 +1,7 @@
 # Lưu sự kiện và ảnh bằng chứng
 
+**05/11/2026:** `suspected_yellow_light` cũng tự lưu ảnh bằng chứng như `suspected_red_light`, kể cả không bật `--save-all-evidence`. Không thay schema hoặc gán lại kết quả của bản ghi cũ.
+
 **Bổ sung 03/11/2026:** EventStore đã hỗ trợ biển số, trạng thái OCR, tỷ lệ phiếu và ảnh `plate.jpg`, tự bổ sung cột trên database cũ. `vehicle_detector.py --track --plate-ocr` ghép OCR theo ID xe và chụp kết quả lúc crossing; không đọc được biển vẫn lưu sự kiện. Chi tiết, lệnh thử và kết quả thật ở bước 5 trong [BIEN_SO.md](BIEN_SO.md). Các mô tả “OCR chưa triển khai” phía dưới thuộc mốc trước ngày 03/11.
 
 Mốc này dùng SQLite có sẵn trong Python, không cần cài thêm database server. Không sửa firmware.
@@ -21,7 +23,7 @@ Mở ảnh theo đường dẫn terminal in ra:
 
 ## Khi chạy chương trình nhận diện
 
-Chạy camera/YOLO/tracking như trước. Khi có `--track` hoặc `--select-line`, chương trình tự mở SQLite và lưu mọi crossing, kể cả xanh/vàng/UNKNOWN. Mặc định **chỉ `suspected_red_light` tự lưu ảnh**, các sự kiện khác có đường dẫn ảnh NULL.
+Chạy camera/YOLO/tracking như trước. Khi có `--track` hoặc `--select-line`, chương trình tự mở SQLite và lưu mọi crossing, kể cả xanh/vàng/UNKNOWN. Mặc định **`suspected_red_light` và `suspected_yellow_light` tự lưu ảnh**, các sự kiện khác có đường dẫn ảnh NULL.
 
 ```text
 data/traffic.db                       SQLite chạy thật
@@ -38,7 +40,7 @@ Kiểm tra toàn luồng bằng video mẫu đã có trên máy, chưa cần MQT
 .\.venv\Scripts\python.exe python/list_events.py --database data/demos/storage_pipeline/traffic.db --limit 1
 ```
 
-`--save-all-evidence` lưu ảnh cho cả crossing không có bằng chứng đỏ để kiểm tra. Nó **không đổi kết quả phân loại**: video mẫu không có nguồn đèn vẫn là UNKNOWN/unverified. Bỏ tùy chọn này khi chỉ muốn ảnh nghi vượt đèn đỏ.
+`--save-all-evidence` lưu ảnh cho cả crossing không có bằng chứng đỏ để kiểm tra. Nó **không đổi kết quả phân loại**: video mẫu không có nguồn đèn vẫn là UNKNOWN/unverified. Bỏ tùy chọn này khi chỉ muốn ảnh nghi vượt đèn đỏ/vàng.
 
 Đổi chỗ lưu bằng `--database` và `--evidence-dir`. `--output` chỉ đổi nơi lưu JSONL/ảnh nhấn S, không đổi database và thư mục bằng chứng. Nếu không bật tracking, không tự tạo database.
 

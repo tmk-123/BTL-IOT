@@ -10,6 +10,8 @@ import tempfile
 
 import cv2
 
+from light_state import SUSPECTED_ASSESSMENTS
+
 
 class EventStore:
     def __init__(self, database, evidence_dir):
@@ -84,7 +86,7 @@ class EventStore:
             saved.setdefault('plate_text', None)
             saved.setdefault('plate_status', 'not_enabled')
             saved.setdefault('plate_vote_share', None)
-            if save_all or event["assessment"] == "suspected_red_light":
+            if save_all or event["assessment"] in SUSPECTED_ASSESSMENTS:
                 if frame is None or annotated is None:
                     raise ValueError("Evidence requires original and annotated frames")
                 height, width = frame.shape[:2]

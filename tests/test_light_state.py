@@ -22,7 +22,7 @@ class LightTests(unittest.TestCase):
 
     def test_red_green_yellow_classification(self):
         for color, expected in [("RED", "suspected_red_light"), ("GREEN", "no_red_light_evidence"),
-                                ("YELLOW", "no_red_light_evidence")]:
+                                ("YELLOW", "suspected_yellow_light")]:
             light = LightState()
             light.ingest(message(color), now=10)
             self.assertEqual(classify_crossing(light, 10.1, 10.5), (color, expected))

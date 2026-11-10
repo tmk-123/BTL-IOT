@@ -22,7 +22,8 @@ def create_demo(output):
                  ('suspected_red_light', 'RED', 'truck', None),
                  ('unverified', 'UNKNOWN', 'car', '30A61235'),
                  ('no_red_light_evidence', 'GREEN', 'car', '30F21717'),
-                 ('unverified', 'UNKNOWN', 'bus', None)]
+                 ('unverified', 'UNKNOWN', 'bus', None),
+                 ('suspected_yellow_light', 'YELLOW', 'car', '30A33918')]
     try:
         for index, (assessment, color, kind, plate) in enumerate(scenarios):
             frame = np.full((540, 960, 3), (55, 65, 75), dtype=np.uint8)
@@ -34,7 +35,7 @@ def create_demo(output):
             cv2.rectangle(frame, (350, 215), (610, 305), (65, 60, 45), -1)
             cv2.rectangle(frame, (353, 355), (610, 402), (245, 245, 245), -1)
             cv2.putText(frame, plate or 'UNREADABLE', (362, 389), cv2.FONT_HERSHEY_SIMPLEX, .7, (20, 20, 20), 2)
-            tint = (60, 60, 230) if color == 'RED' else (70, 190, 70) if color == 'GREEN' else (130, 130, 130)
+            tint = {'RED': (60, 60, 230), 'YELLOW': (0, 210, 255), 'GREEN': (70, 190, 70)}.get(color, (130, 130, 130))
             cv2.circle(frame, (870, 175), 24, tint, -1)
             cv2.putText(frame, f'{kind.upper()} | {color}', (30, 500), cv2.FONT_HERSHEY_SIMPLEX, .75, (245, 245, 245), 2)
             annotated = frame.copy()

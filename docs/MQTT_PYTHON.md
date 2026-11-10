@@ -70,7 +70,8 @@ Kết quả:
 | assessment | Ý nghĩa |
 | --- | --- |
 | `suspected_red_light` | Qua vạch đúng chiều trong khoảng có dữ liệu đỏ liên tục; cần người kiểm tra |
-| `no_red_light_evidence` | Dữ liệu xanh/vàng liên tục; không có bằng chứng đỏ |
+| `suspected_yellow_light` | Qua vạch đúng chiều trong khoảng vàng liên tục; cộng cùng bộ đếm nghi vượt đèn với đỏ (cập nhật 05/11/2026) |
+| `no_red_light_evidence` | Dữ liệu xanh liên tục; không có bằng chứng đỏ |
 | `unverified` | Thiếu dữ liệu đèn, hết hạn hoặc đổi màu trong khoảng theo dõi |
 | `not_applicable_direction` | Xe đi chiều không dùng để xét nghi vượt đèn đỏ |
 

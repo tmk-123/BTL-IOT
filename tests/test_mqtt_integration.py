@@ -71,7 +71,8 @@ class MqttIntegrationTests(unittest.TestCase):
                     wait_for(lambda: receiver.state.current() == color)
                     now = time.monotonic()
                     assessment = classify_crossing(receiver.state, now, now)[1]
-                    self.assertEqual(assessment, "suspected_red_light" if color == "RED" else "no_red_light_evidence")
+                    self.assertEqual(assessment, {"RED": "suspected_red_light", "YELLOW": "suspected_yellow_light",
+                                                  "GREEN": "no_red_light_evidence"}[color])
                 wait_for(lambda: receiver.state.current() == "UNKNOWN", timeout=2)
                 payload.update(state="RED", seq=5, uptime_ms=5000)
                 publisher.publish("integration/light/state", json.dumps(payload), qos=1).wait_for_publish()

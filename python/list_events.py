@@ -10,7 +10,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--database", type=Path, default=Path(__file__).resolve().parents[1] / "data/traffic.db")
     parser.add_argument("--limit", type=int, default=10)
-    parser.add_argument("--assessment", choices=["suspected_red_light", "no_red_light_evidence", "unverified", "not_applicable_direction"])
+    parser.add_argument("--assessment", choices=["suspected_red_light", "suspected_yellow_light", "no_red_light_evidence", "unverified", "not_applicable_direction"])
     args = parser.parse_args()
     if args.limit < 1:
         parser.error("--limit must be positive")

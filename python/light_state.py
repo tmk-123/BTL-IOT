@@ -8,6 +8,9 @@ from threading import RLock
 import time
 
 
+SUSPECTED_ASSESSMENTS = ("suspected_red_light", "suspected_yellow_light")
+
+
 @dataclass
 class Sample:
     received: float
@@ -105,25 +108,29 @@ def classify_crossing(light, start, end, allowed_direction=True):
         return state, "not_applicable_direction"
     if state == "RED":
         return state, "suspected_red_light"
-    if state in {"GREEN", "YELLOW"}:
+    if state == "YELLOW":
+        return state, "suspected_yellow_light"
+    if state == "GREEN":
         return state, "no_red_light_evidence"
     return state, "unverified"
 
 
-def assess_crossing(light, start, end, direction, expected_direction="negative_to_positive", timing_margin=0.5):
+def assess_crossing(light, start, end, direction, expected_direction="both", timing_margin=0.5):
     """Explain a crossing decision; all times use the same monotonic clock."""
     directions = {"negative_to_positive", "positive_to_negative"}
-    if direction not in directions or expected_direction not in directions:
+    if direction not in directions or expected_direction not in directions | {"both"}:
         raise ValueError("Unsupported crossing direction")
     if not isfinite(timing_margin) or timing_margin < 0:
         raise ValueError("timing_margin must be finite and nonnegative")
     if not isfinite(start) or not isfinite(end) or start > end:
         return dict(light_state="UNKNOWN", assessment="unverified", assessment_reason="invalid_time_window")
-    state, assessment = classify_crossing(light, start - timing_margin, end, direction == expected_direction)
+    state, assessment = classify_crossing(light, start - timing_margin, end,
+                                          expected_direction == "both" or direction == expected_direction)
     reasons = {
         "not_applicable_direction": "opposite_direction",
         "suspected_red_light": "continuous_red_during_crossing",
-        "no_red_light_evidence": "continuous_green_or_yellow_during_crossing",
+        "suspected_yellow_light": "continuous_yellow_during_crossing",
+        "no_red_light_evidence": "continuous_green_during_crossing",
         "unverified": "missing_stale_or_changing_light" if light is not None else "no_light_source",
     }
     return dict(light_state=state, assessment=assessment, assessment_reason=reasons[assessment])

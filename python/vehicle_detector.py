@@ -17,7 +17,7 @@ from camera_viewer import SnapshotCapture
 from line_crossing import LineCrossing
 from line_selector import select_line
 from mqtt_light import add_mqtt_arguments, from_arguments
-from light_state import assess_crossing
+from light_state import SUSPECTED_ASSESSMENTS, assess_crossing
 from event_store import EventStore
 from vehicle_plate import VehiclePlateReader, empty_plate
 
@@ -39,6 +39,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, help="Local image/video path or HTTP URL")
     parser.add_argument("--snapshot", action="store_true", help="Repeated JPEG requests to http://<IP>/capture")
+    parser.add_argument('--async-snapshot', action='store_true',
+                        help='Fetch latest snapshots while AI runs; keeps receive timestamps and resets history after outages')
     parser.add_argument("--model", default=str(ROOT / "models" / "yolov8n.pt"))
     parser.add_argument("--conf", type=float, default=0.35)
     parser.add_argument("--imgsz", type=int, default=640)
@@ -60,8 +62,8 @@ def main():
     parser.add_argument("--line-margin", type=float, default=5, help="Pixel deadband around line")
     parser.add_argument("--max-gap", type=int, default=5, help="Max frame-index gap for crossing continuity")
     parser.add_argument("--direction", choices=["both", "negative_to_positive", "positive_to_negative"], default="both")
-    parser.add_argument("--violation-direction", choices=["negative_to_positive", "positive_to_negative"],
-                        default="negative_to_positive", help="Approach direction for red-light suspicion")
+    parser.add_argument("--violation-direction", choices=["both", "negative_to_positive", "positive_to_negative"],
+                        default="both", help="Default demo assesses every crossing; optionally restrict the approach direction")
     parser.add_argument("--timing-margin", type=float, default=0.5, help="Extra lookback seconds for camera/network timing uncertainty")
     add_mqtt_arguments(parser)
     args = parser.parse_args()
@@ -95,6 +97,8 @@ def main():
         parser.error("Invalid timing-margin, light-timeout or MQTT port")
     if args.snapshot and not remote:
         parser.error("--snapshot requires an HTTP URL ending in /capture")
+    if args.async_snapshot and not args.snapshot:
+        parser.error('--async-snapshot requires --snapshot')
     path = Path(args.source)
     if not remote and not path.is_file():
         parser.error(f"Input file does not exist: {path}")
@@ -132,7 +136,11 @@ def main():
             raise ValueError("Model has no supported vehicle classes")
         if not image:
             if args.snapshot:
-                cap = SnapshotCapture(args.source)
+                if args.async_snapshot:
+                    from latest_capture import LatestSnapshotCapture
+                    cap = LatestSnapshotCapture(args.source)
+                else:
+                    cap = SnapshotCapture(args.source)
             else:
                 cap = cv2.VideoCapture()
                 if remote:
@@ -175,8 +183,16 @@ def main():
                 print("End of video.")
                 break
             camera_failures = 0
-            observed_at = datetime.now().astimezone().isoformat()
-            observed_mono = time.monotonic()
+            if args.async_snapshot:
+                observed_at, observed_mono = cap.observed_at, cap.observed_mono
+                if cap.discontinuity:
+                    crossing = None
+                    if plate_reader is not None:
+                        plate_reader.reset()
+                    print('Snapshot interruption recovered. Crossing/OCR history reset.', flush=True)
+            else:
+                observed_at = datetime.now().astimezone().isoformat()
+                observed_mono = time.monotonic()
             if args.select_line:
                 chosen = select_line(frame, read_frame=cap.read if remote else None)
                 if chosen is None:
@@ -240,7 +256,7 @@ def main():
                                 interval_start, interval_end, direction,
                                 args.violation_direction, args.timing_margin)
                             light_state, assessment = decision["light_state"], decision["assessment"]
-                            suspected += assessment == "suspected_red_light"
+                            suspected += assessment in SUSPECTED_ASSESSMENTS
                             video_ms = cap.get(cv2.CAP_PROP_POS_MSEC) if not remote else None
                             event = {"event_id": f"{session_id}:{frame_index}:{track_id}",
                                      "session_id": session_id, "frame": frame_index, "track_id": track_id,
@@ -274,7 +290,7 @@ def main():
                 live_light = receiver.state.current() if receiver else "UNKNOWN"
                 cv2.putText(preview, f"Crossings: {crossings} | Light: {live_light}", (10, 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-                cv2.putText(preview, f"Suspected red-light: {suspected}", (10, 75),
+                cv2.putText(preview, f"Suspected red/yellow-light: {suspected}", (10, 75),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 100, 255), 2)
                 if args.simulation:
                     cv2.putText(preview, 'SIMULATION - synthetic light', (10, 105),

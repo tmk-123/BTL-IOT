@@ -1,5 +1,9 @@
 # Giao diện xem sự kiện bằng Streamlit
 
+**Giao diện gọn 05/11/2026:** màn hình chính mặc định chỉ hiện nghi vượt đèn, gồm một ô **Tổng lượt nghi vượt đèn**, tìm biển số, lọc **Tất cả / Đỏ / Vàng** và danh sách bấm xem chi tiết. Đã bỏ loại xe, JSON và các ô thống kê trùng. **Cài đặt** chứa nguồn dữ liệu và lọc ngày; **Nhật ký kiểm tra → Xem tất cả sự kiện** dùng để xem xanh/UNKNOWN và bản ghi cũ. Phân trang chỉ xuất hiện khi quá 25 lượt, ở cuối danh sách; CSV nằm trong **Xuất dữ liệu**.
+
+Mỗi dòng có biển số, thời gian và kết quả. Bấm vào dòng để mở hộp **Chi tiết vi phạm**: ảnh tại vạch, biển số, thời gian, màu đèn. Ảnh gốc và ảnh xe nằm trong mục mở rộng. Đóng bằng dấu X để chọn lượt khác. Tổng đỏ + vàng được tính theo bộ lọc hiện tại; dữ liệu cũ giữ nguyên kết quả đã lưu.
+
 **Bổ sung 03/11/2026:** đã có cột biển số/trạng thái OCR, tìm theo biển không phân biệt hoa thường, xuất CSV và ảnh cắt biển ở chi tiết. Chọn **Video biển số** để xem dữ liệu pipeline mẫu; nhập `29A33185` để xem 1 sự kiện có OCR ổn định. Cách tạo lại dữ liệu và giới hạn ở bước 5 trong [BIEN_SO.md](BIEN_SO.md). Những mục ghi “chưa có OCR” bên dưới là mô tả mốc 02/11.
 
 Chạy PowerShell tại thư mục gốc dự án:
@@ -15,22 +19,23 @@ Mở `http://127.0.0.1:8501` bằng trình duyệt trên laptop. Giữ PowerShel
 ## Xem ngay dữ liệu mẫu
 
 1. Nếu chưa có dữ liệu, mở PowerShell khác chạy `.\.venv\Scripts\python.exe python/storage_demo.py`.
-2. Trong thanh bên của giao diện, chọn **Demo lưu trữ**.
-3. Xem bảng, chọn một sự kiện trong mục **Chi tiết và ảnh bằng chứng**.
+2. Trong thanh bên, mở **Cài đặt → Chọn dữ liệu → Demo lưu trữ**.
+3. Bấm vào một dòng trong danh sách để mở **Chi tiết vi phạm** và xem ảnh bằng chứng.
 4. Ba ảnh gồm ảnh gốc, ảnh có khung và ảnh cắt xe. Cảnh báo trên trang xác định rõ dữ liệu thử.
 
 **Dữ liệu chạy thật** đọc `data/traffic.db`; **Video mẫu** đọc `data/demos/storage_pipeline/traffic.db`. Có thể chọn **Đường dẫn khác** để đọc SQLite khác cùng schema của dự án. Trang không tự tạo dữ liệu hoặc database mới.
 
 ## Chức năng
 
-- Thống kê tổng sự kiện, nghi vượt đèn đỏ, chưa xác minh và không có bằng chứng đỏ theo bộ lọc.
-- Lọc kết quả phân loại, loại xe, màu đèn, ngày ghi nhận; tìm chuỗi trong ID sự kiện/ID xe/nguồn.
+- Một ô tổng nghi vượt đèn đỏ + vàng theo bộ lọc.
+- Tìm riêng biển số, không phân biệt hoa/thường; lọc một lần theo Tất cả / Đỏ / Vàng. Lọc ngày và chọn nguồn nằm trong Cài đặt.
+- Nhật ký kiểm tra cho phép xem mọi sự kiện và lọc theo loại ghi nhận, gồm chưa xác minh khi mất MQTT.
 - Ngày theo phần ngày trong timestamp đã lưu (hiện dùng giờ Bangkok/Vietnam); giá trị ngày mặc định của giao diện dùng Asia/Bangkok.
-- Bảng có phân trang; số liệu thống kê/biểu đồ tính trên toàn bộ kết quả lọc, không chỉ trang hiện tại.
+- Danh sách có phân trang ở cuối khi quá 25 lượt; tổng nghi vượt đèn tính trên toàn bộ kết quả lọc, không chỉ trang hiện tại.
 - Tải CSV UTF-8 có BOM cho **trang hiện tại**, không phải toàn bộ database.
-- Chọn sự kiện để xem ba ảnh và JSON chi tiết. Không có ảnh hoặc mất file thì thông báo rõ; không tự tạo lại bằng chứng.
+- Bấm vào dòng sự kiện để xem thông tin và ảnh trong hộp chi tiết; không hiển thị JSON. Không có ảnh hoặc mất file thì thông báo rõ; không tự tạo lại bằng chứng.
 - Nhấn **Làm mới dữ liệu** sau khi chương trình camera thêm sự kiện. Trang không tự chạy camera hay điều khiển LED.
-- Không có OCR/biển số ở mốc này, không tạo kết quả biển số giả. Màu đèn hiển thị là màu gắn với sự kiện đã lưu, không phải bộ theo dõi màu đèn trực tiếp.
+- Biển số và ảnh lấy từ sự kiện đã lưu; thiếu biển thì hiển thị Chưa đọc được. Màu đèn trong chi tiết là màu gắn với sự kiện, không phải bộ theo dõi màu đèn trực tiếp.
 
 ## Giới hạn
 

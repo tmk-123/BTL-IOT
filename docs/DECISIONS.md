@@ -1,5 +1,22 @@
 # Nhật ký quyết định kỹ thuật
 
+## Cập nhật 05/11/2026 — demo không lọc chiều
+
+- Người dùng yêu cầu bỏ chiều vì demo một chiều. Đặt mặc định `expected_direction`/`--violation-direction` là `both`: mọi lần đổi phía qua đoạn vạch được phân loại theo màu đèn, không loại lượt vì hướng đi. Giữ kiểm tra crossing thật, dữ liệu đèn liên tục và timeout như trước.
+- Bản ghi cũ giữ nguyên; không gán lại màu đèn hoặc xóa lịch sử. Khi đưa xe quay về qua vạch đỏ/vàng vẫn có thể ghi thêm lượt, nên nhấc xe về vị trí xuất phát ngoài khung hình nếu chỉ muốn minh họa một chiều.
+
+## Cập nhật 05/11/2026 — tối ưu FPS camera snapshot
+
+- Đo riêng camera/YOLO/OCR trên máy i7-6600U: HD quality 4 tạo JPEG khoảng 114 KB, tải ảnh khoảng 0,45 giây; VGA quality 12 còn khoảng 19 KB và 0,24 giây trong lần đo này. Giữ YOLO imgsz 640 vì 416/320 bỏ sót xe mô hình ở cả 8 ảnh đối chiếu.
+- Thêm `--async-snapshot` tùy chọn để lấy ảnh đồng thời với xử lý AI, chỉ giữ ảnh mới nhất. Tránh bỏ qua lượt chạy YOLO/tracking hoặc dùng lại OCR cũ như quan sát mới. Timestamp theo thời điểm nhận ảnh; cờ gián đoạn không bị mất khi frame lỗi bị ảnh mới ghi đè, nên crossing/OCR vẫn reset sau mất ảnh.
+- Giữ nguyên timeout MQTT và logic phân loại. Đổi độ phân giải cần chọn lại vạch. Tốc độ đo là thử nhanh trên cảnh/mạng hiện tại, không phải cam kết FPS hay độ chính xác.
+
+## Cập nhật 05/11/2026 — gộp bộ đếm nghi vượt đèn đỏ/vàng
+
+- Người dùng yêu cầu lượt qua lúc vàng cũng được tính và chọn một bộ đếm nghi vượt đèn chung cho đỏ/vàng. Giữ riêng `suspected_red_light` / `suspected_yellow_light` trong bản ghi để không mất màu đèn thực tế, thay cho phương án ghi vàng thành RED.
+- Áp dụng cùng điều kiện crossing đúng chiều và một màu liên tục trong toàn khoảng xét có dự phòng 0,5 giây. Xanh không tăng bộ đếm; đổi màu, mất heartbeat hoặc thiếu lịch sử vẫn chưa xác minh. Đây là chính sách demo để xem lại bằng chứng, chưa mô hình hóa mọi ngoại lệ của đèn vàng.
+- Camera hiển thị tổng đỏ + vàng; dashboard Nghi vi phạm và chỉ số tổng gồm cả hai. Sự kiện nghi vàng tự lưu ảnh như nghi đỏ. Không đổi nhãn dữ liệu cũ hoặc thay firmware/MQTT; chỉ lượt mới sau khi khởi động lại detector dùng chính sách mới.
+
 Cập nhật: **01/11/2026**. File tổng hợp lựa chọn đã xác nhận và đề xuất còn mở; xem [định hướng dự án](DINH_HUONG_DU_AN.md) để theo dõi tiến độ.
 
 Trạng thái: **BẮT BUỘC**, **ĐÃ CHỐT**, **ĐÃ THỐNG NHẤT HƯỚNG**, **ĐỀ XUẤT/CHƯA CHỐT**. Chốt hướng công nghệ không đồng nghĩa đã chọn phiên bản cụ thể hay đã kiểm thử thành công.

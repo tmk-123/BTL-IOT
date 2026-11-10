@@ -7,7 +7,7 @@
 #define WIFI_PASSWORD "1234567@"  
 
 // IPv4 của laptop trên mạng Hotspot Redmi
-#define MQTT_HOST     "192.168.0.102"
+#define MQTT_HOST     "10.82.212.75"
 
 // Tài khoản MQTT đã tạo trong tools/mosquitto/passwd
 #define MQTT_USER     "esp32"

@@ -37,6 +37,7 @@ PowerShell ở thư mục gốc dự án, dùng hai terminal:
 | Thao tác | Kết quả mong đợi khi xe đi đúng chiều qua vạch |
 | --- | --- |
 | Nhấn Đỏ, chờ >=2 giây rồi cho xe qua | RED / nghi vượt đèn đỏ trong bài mô phỏng |
+| Nhấn Vàng, chờ >=2 giây rồi cho xe qua | YELLOW / nghi vượt đèn vàng, cộng vào cùng bộ đếm nghi vượt đèn với đỏ (05/11/2026) |
 | Nhấn Xanh, chờ >=2 giây rồi cho xe qua | GREEN / không có bằng chứng đèn đỏ |
 | Nhấn Ngừng gửi, chờ hết timeout 1.5 giây | UNKNOWN / chưa xác minh |
 | Xe chưa đổi phía qua vạch | Không tạo crossing |

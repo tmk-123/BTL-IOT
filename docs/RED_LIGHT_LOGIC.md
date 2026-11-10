@@ -1,4 +1,8 @@
-# Logic nghi vượt đèn đỏ
+# Logic nghi vượt đèn đỏ/vàng
+
+**Bỏ lọc chiều trong demo (05/11/2026):** mặc định `--violation-direction both`, mọi lượt xe đổi phía qua đoạn vạch đều xét màu đèn. Lượt quay lại không bị loại chỉ vì hướng đi. Những bản ghi `not_applicable_direction` của phiên cũ giữ nguyên; có thể chỉ định một chiều qua CLI nếu dùng lại cho bố trí giao thông có phân chiều.
+
+**05/11/2026:** lượt qua khi YELLOW liên tục được ghi `suspected_yellow_light`. Theo yêu cầu demo, bộ đếm trên camera và dashboard gộp nghi đỏ + nghi vàng; từng bản ghi giữ màu và lý do riêng. Áp dụng cho lượt mới sau khi khởi động lại nhận diện, không đổi nhãn dữ liệu lịch sử.
 
 Chạy thử không cần camera, YOLO, ESP32 hoặc broker:
 
@@ -6,18 +10,19 @@ Chạy thử không cần camera, YOLO, ESP32 hoặc broker:
 .\.venv\Scripts\python.exe python/red_light_demo.py
 ```
 
-Chương trình chạy 14 tình huống với vị trí xe và bản tin đèn giả lập theo cùng một trục thời gian. Mỗi dòng PASS nghĩa là kết quả đúng với tình huống đặt ra. Báo cáo có chi tiết sự kiện ở `data/demos/red_light_logic.json`. Demo này kiểm tra logic, chưa xác nhận nhận diện xe hay độ trễ của phần cứng thật.
+Chương trình chạy 19 tình huống với vị trí xe và bản tin đèn giả lập theo cùng một trục thời gian. Mỗi dòng PASS nghĩa là kết quả đúng với tình huống đặt ra. Báo cáo có chi tiết sự kiện ở `data/demos/red_light_logic.json`. Demo này kiểm tra logic, chưa xác nhận nhận diện xe hay độ trễ của phần cứng thật.
 
 ## Điều kiện đánh dấu
 
-Xe phải có ID theo dõi, điểm đáy khung xe chuyển từ trước vạch sang sau vạch và đi đúng chiều xét vi phạm. Đèn phải đỏ liên tục, bản tin còn hiệu lực trong toàn khoảng từ vị trí ổn định trước vạch đến frame xác nhận qua vạch, có thêm khoảng dự phòng `--timing-margin` (mặc định 0.5 giây) ở phía trước.
+Xe phải có ID theo dõi, điểm đáy khung xe đổi phía qua đoạn vạch. Đèn phải đỏ liên tục hoặc vàng liên tục, bản tin còn hiệu lực trong toàn khoảng từ vị trí ổn định trước vạch đến frame xác nhận qua vạch, có thêm khoảng dự phòng `--timing-margin` (mặc định 0.5 giây) ở phía trước.
 
 | Tình huống | Kết quả |
 | --- | --- |
 | Qua vạch đúng chiều, đỏ liên tục | `suspected_red_light` — nghi vượt đèn đỏ |
-| Qua vạch, xanh/vàng liên tục | `no_red_light_evidence` — không có bằng chứng đỏ |
+| Qua vạch đúng chiều, vàng liên tục | `suspected_yellow_light` — nghi vượt đèn vàng, tính trong cùng bộ đếm nghi vượt đèn |
+| Qua vạch, xanh liên tục | `no_red_light_evidence` — không có bằng chứng đỏ |
 | Đèn đổi màu trong khoảng qua vạch hoặc thiếu/hết hạn dữ liệu | `unverified` — chưa xác minh |
-| Qua vạch chiều ngược | `not_applicable_direction` — không xét chiều này |
+| Qua vạch theo hướng trở lại | Vẫn xét màu đèn như lượt đi tới trong cấu hình demo mặc định |
 | Dừng trước vạch, chỉ rung gần vạch | Không có sự kiện qua vạch |
 | Xe đã ở sau vạch rồi đèn mới đỏ | Không tạo sự kiện mới chỉ vì đổi màu |
 | Qua lúc xanh rồi đèn mới đỏ | Giữ kết quả lần qua lúc xanh, không gán lại thành vi phạm |
@@ -26,7 +31,7 @@ Xe phải có ID theo dõi, điểm đáy khung xe chuyển từ trước vạch
 
 JSONL khi chạy camera bổ sung `assessment_reason` để biết vì sao có kết quả, ví dụ `continuous_red_during_crossing`, `opposite_direction`, `missing_stale_or_changing_light`, `no_light_source`. Khi không có sự kiện qua vạch thì không tạo bản ghi phân loại.
 
-Chiều mặc định: vạch vẽ trái sang phải, xe đi trên xuống dưới. Đổi bằng `--violation-direction positive_to_negative` khi cần. Khi xe quay lại rồi thực hiện lượt qua mới, có thể ghi sự kiện mới; không bảo đảm chống trùng giữa các ID khác nhau.
+Mặc định không lọc chiều. Khi chủ động cần chỉ xét một chiều, dùng `--violation-direction negative_to_positive` hoặc `positive_to_negative`. Khi xe quay lại rồi thực hiện lượt qua mới, có thể ghi sự kiện mới; không bảo đảm chống trùng giữa các ID khác nhau.
 
 ## Chạy thật
 

@@ -67,6 +67,16 @@ class StorageTests(unittest.TestCase):
         self.assertFalse(self.images.exists())
         self.assertEqual(len(self.rows()), 1)
 
+    def test_yellow_suspicion_saves_evidence_without_save_all(self):
+        event = example_event("suspected_yellow_light")
+        event.update(light_state="YELLOW", assessment_reason="continuous_yellow_during_crossing")
+        saved, inserted = self.store.save(event, self.frame, self.annotated)
+        self.assertTrue(inserted)
+        self.assertEqual(saved['light_state'], 'YELLOW')
+        for key in ('raw_image', 'annotated_image', 'vehicle_image'):
+            self.assertTrue(Path(saved[key]).is_file())
+        self.assertEqual(self.rows()[0]['assessment'], 'suspected_yellow_light')
+
     def test_save_all_keeps_unknown_assessment(self):
         saved, _ = self.store.save(example_event("unverified"), self.frame, self.annotated, save_all=True)
         self.assertEqual(saved["assessment"], "unverified")
