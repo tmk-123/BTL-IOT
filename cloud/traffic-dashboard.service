@@ -1,0 +1,23 @@
+[Unit]
+Description=Traffic IoT read-only dashboard
+After=network.target traffic-iot.service
+Requires=traffic-iot.service
+
+[Service]
+User=traffic-dashboard
+Group=traffic-dashboard
+WorkingDirectory=/opt/traffic-iot/dashboard
+EnvironmentFile=/etc/traffic-iot/dashboard.env
+Environment=HOME=/var/lib/traffic-dashboard
+ExecStart=/opt/traffic-iot/dashboard-venv/bin/python -m streamlit run dashboard.py --server.address 127.0.0.1 --server.port 8501 --server.baseUrlPath traffic --server.headless true --browser.gatherUsageStats false --client.toolbarMode minimal
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/traffic-dashboard
+
+[Install]
+WantedBy=multi-user.target

@@ -17,9 +17,9 @@
 #define LED_ACTIVE_HIGH 1
 
 // ----- Thời gian mỗi trạng thái (mili giây) -----
-#define DURATION_GREEN_MS   1000UL
-#define DURATION_YELLOW_MS   10000UL
-#define DURATION_RED_MS     1000UL
+#define DURATION_GREEN_MS   10000UL
+#define DURATION_YELLOW_MS   4000UL
+#define DURATION_RED_MS     10000UL
 
 // ----- Serial Monitor -----
 #define SERIAL_BAUD 115200

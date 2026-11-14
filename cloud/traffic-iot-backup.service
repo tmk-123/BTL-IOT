@@ -1,0 +1,8 @@
+[Unit]
+Description=Back up Traffic IoT database and evidence
+After=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/traffic-iot/backup.py
+UMask=0077

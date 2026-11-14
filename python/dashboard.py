@@ -4,6 +4,7 @@ import csv
 from datetime import datetime
 import io
 import json
+import os
 from pathlib import Path
 import sqlite3
 import sys
@@ -13,9 +14,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import streamlit as st
 from PIL import Image
 from dashboard_data import load_events
+from dashboard_cloud import load_cloud_events, load_cloud_image
 from light_state import SUSPECTED_ASSESSMENTS
 
 ROOT = Path(__file__).resolve().parents[1]
+CLOUD_MODE = bool(os.environ.get('IOT_CLOUD_URL'))
 ASSESSMENTS = {
     'suspected_red_light': 'Nghi vượt đèn đỏ',
     'suspected_yellow_light': 'Nghi vượt đèn vàng',
@@ -50,6 +53,14 @@ def show_image(row, key, label):
     image_path = row.get(key)
     if not image_path:
         st.info('Chưa có ảnh ở mục này.')
+    elif CLOUD_MODE:
+        try:
+            content = load_cloud_image(image_path)
+            with Image.open(io.BytesIO(content)) as image:
+                image.verify()
+            st.image(content, width='stretch')
+        except (OSError, ValueError):
+            st.warning('Chưa tải được ảnh. Vui lòng thử làm mới dữ liệu.')
     elif not Path(image_path).is_file():
         st.warning('Không tìm thấy file ảnh. Kiểm tra thư mục bằng chứng.')
     else:
@@ -98,6 +109,13 @@ def main():
         [data-testid="stMetricValue"] {font-size: 2rem;}
         .st-key-event_list button {justify-content: flex-start; text-align: left; min-height: 3.4rem;}
         .st-key-event_list button p {text-align: left;}
+        @media (max-width: 640px) {
+            .block-container {padding: 1.2rem 1rem 2rem;}
+            h1 {font-size: 1.85rem !important;}
+            .st-key-event_list button {padding: .8rem; min-height: 4rem;}
+            .st-key-event_list button p {font-size: .95rem; line-height: 1.5; overflow-wrap: anywhere;}
+            [data-testid="stDialog"] [role="dialog"] {max-width: calc(100vw - 1rem);}
+        }
     </style>''', unsafe_allow_html=True)
     st.caption('GIÁM SÁT GIAO THÔNG  /  HỒ SƠ SỰ KIỆN')
     st.title('Xe nghi vi phạm')
@@ -114,15 +132,21 @@ def main():
                                   format_func=lambda value: ASSESSMENTS.get(value, 'Tất cả'),
                                   key='journal_assessment') if journal else None)
         with st.expander('Cài đặt'):
-            preset = st.selectbox('Chọn dữ liệu', list(PRESETS), index=list(PRESETS).index(default), key='dataset')
-            database = PRESETS[preset]
-            if database is None:
-                database = Path(st.text_input('Đường dẫn SQLite', str(ROOT / 'data/traffic.db'), key='database'))
+            if CLOUD_MODE:
+                preset, database = 'Dữ liệu cloud', None
+                st.caption('Dữ liệu đã đồng bộ từ camera.')
+            else:
+                preset = st.selectbox('Chọn dữ liệu', list(PRESETS), index=list(PRESETS).index(default), key='dataset')
+                database = PRESETS[preset]
+                if database is None:
+                    database = Path(st.text_input('Đường dẫn SQLite', str(ROOT / 'data/traffic.db'), key='database'))
             by_date = st.checkbox('Lọc theo ngày', key='by_date')
             today = datetime.now(ZoneInfo('Asia/Bangkok')).date()
             date_from = st.date_input('Từ ngày', today, key='date_from') if by_date else None
             date_to = st.date_input('Đến ngày', today, key='date_to') if by_date else None
     assessment = journal_assessment if journal else SUSPECTED_ASSESSMENTS
+    if CLOUD_MODE:
+        st.caption('Dữ liệu đã đồng bộ · Cập nhật lúc ' + datetime.now(ZoneInfo('Asia/Bangkok')).strftime('%H:%M:%S %d/%m/%Y'))
     if preset in {'Demo lưu trữ', 'Video mẫu', 'Video biển số', 'Demo giao diện', 'Camera + đèn giả lập'}:
         st.warning('DỮ LIỆU DEMO — dùng để thử giao diện, không phải hồ sơ vi phạm thực tế.')
     summary_slot = st.container()
@@ -141,20 +165,21 @@ def main():
     if date_from and date_to and date_from > date_to:
         st.error('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.')
         return
-    if not database.is_file():
+    if not CLOUD_MODE and not database.is_file():
         st.info('Chưa có dữ liệu ở nguồn đã chọn. Chạy camera rồi bấm Làm mới dữ liệu.')
         return
     try:
         filters = dict(assessment=assessment, light_state=light, date_from=date_from, date_to=date_to,
                        search=search.strip(), limit=page_size, plate_only=True)
-        rows, total, summary = load_events(database, **filters, offset=(page-1)*page_size)
+        loader = load_cloud_events if CLOUD_MODE else load_events
+        rows, total, summary = loader(database, **filters, offset=(page-1)*page_size)
         last_page = max(1, (total+page_size-1)//page_size)
         if page > last_page:
             page = last_page
             st.session_state['page'] = page
-            rows, total, summary = load_events(database, **filters, offset=(page-1)*page_size)
+            rows, total, summary = loader(database, **filters, offset=(page-1)*page_size)
     except (sqlite3.Error, OSError, ValueError) as error:
-        st.error(f'Không đọc được dữ liệu: {error}')
+        st.error('Chưa kết nối được dữ liệu. Vui lòng thử làm mới sau.' if CLOUD_MODE else f'Không đọc được dữ liệu: {error}')
         return
     suspected_total = sum(summary.get(kind, 0) for kind in SUSPECTED_ASSESSMENTS)
     with summary_slot:

@@ -1,0 +1,15 @@
+Để chạy toàn bộ hệ thống camera + đèn thật + nhận diện, mở 3 cửa sổ PowerShell, mỗi cửa sổ vào thư mục:
+cd D:\Ki1_4\IOT\BTL
+1. Cửa sổ 1 — bật MQTT broker:
+& "C:\Program Files\mosquitto\mosquitto.exe" -c tools\mosquitto\mosquitto.conf -v
+2. Cửa sổ 2 — chạy nhận diện:
+cd D:\Ki1_4\IOT\BTL
+.\.venv\Scripts\python.exe -u -B python/vehicle_detector.py --source http://10.133.25.69/capture --snapshot --async-snapshot --track --select-line --conf 0.15 --plate-ocr --plate-max-gap 1.5 --mqtt-host 127.0.0.1 --mqtt-port 1883 --mqtt-user laptop --save-all-evidence
+3. Cửa sổ 3 — chạy giao diện:
+.\.venv\Scripts\python.exe -m streamlit run python/dashboard.py --server.address 127.0.0.1 --server.port 8501
+Mở http://127.0.0.1:8501, nhấn Làm mới dữ liệu sau mỗi lượt xe qua vạch.
+Lưu ý: MQTT_HOST trong secrets.h của ESP32 đèn phải là IP Wi-Fi hiện tại của laptop. Nếu đổi mạng, sửa IP và nạp lại firmware. Nếu chỉ muốn xem dữ liệu đã lưu, chạy riêng bước 3.
+
+
+
+

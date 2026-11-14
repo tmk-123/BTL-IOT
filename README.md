@@ -1,5 +1,7 @@
 # Demo IoT giao thông: camera, đèn MQTT, biển số và dashboard
 
+**Cloud 15/11/2026:** đã có [đồng bộ SQLite/ảnh lên VPS và dashboard HTTPS có đăng nhập](docs/CLOUD.md) tại `https://jenkins.tienichnhanong.com/traffic/`, dùng trên điện thoại/máy tính. AI/MQTT tiếp tục chạy local; đồng bộ có gửi lại khi mất mạng và chống ghi trùng.
+
 **Hướng dẫn demo cập nhật 05/11/2026:** xem [mục 11 — chạy từ đầu đến cuối](#11-cách-demo-từ-đầu-đến-cuối). Dùng ba cửa sổ PowerShell: broker MQTT, kiểm tra đèn/nhận diện, dashboard. Màu đèn lấy từ ESP32 điều khiển LED qua MQTT; hình ảnh lấy riêng từ ESP32-CAM qua HTTP.
 
 Đã chạy chung camera thật + MQTT đèn thật + nhận diện xe/biển số + SQLite trong phiên 05/11. Có bản ghi qua vạch lúc đỏ với biển `29A22222` và ảnh bằng chứng. Đây là thử nghiệm trên mô hình, chưa phải đánh giá độ chính xác hay độ ổn định dài hạn. **Bộ đếm Nghi vượt đèn gộp các lượt qua lúc đỏ và vàng; bản ghi vẫn giữ màu đèn và lý do riêng.**

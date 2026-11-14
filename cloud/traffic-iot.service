@@ -1,0 +1,22 @@
+[Unit]
+Description=Traffic IoT storage API
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+User=traffic-iot
+Group=traffic-iot
+WorkingDirectory=/opt/traffic-iot
+EnvironmentFile=/etc/traffic-iot/api.env
+ExecStart=/opt/traffic-iot/venv/bin/uvicorn api:app --host 127.0.0.1 --port 8765 --no-access-log
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/traffic-iot
+
+[Install]
+WantedBy=multi-user.target

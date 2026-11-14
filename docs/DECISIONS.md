@@ -1,5 +1,23 @@
 # Nhật ký quyết định kỹ thuật
 
+## Cập nhật 15/11/2026 — dashboard cloud có đăng nhập
+
+- Người dùng xác nhận đưa dashboard lên VPS, đọc cloud, đăng nhập và dùng trên điện thoại.
+- Giữ Streamlit và giao diện hiện tại thay vì viết lại frontend/app native, giảm phạm vi thay đổi và giữ chức năng local. Thêm API lọc, tổng hợp và phân trang trên PostgreSQL; dashboard nhận metadata/ảnh qua API bằng khóa chỉ đọc.
+- Cân nhắc đăng nhập trong Streamlit hoặc bảo vệ tại reverse proxy. Chọn Caddy Basic Authentication qua HTTPS để bảo vệ đồng thời giao diện, media và WebSocket; một tài khoản xem chung cho giai đoạn demo. Đánh đổi: hộp đăng nhập do trình duyệt hiển thị, chưa có logout trong app hay tài khoản cá nhân.
+- Dùng `/traffic/` trên domain HTTPS có sẵn, giữ route `/iot-api/` và Jenkins. Streamlit chạy user riêng, chỉ nghe loopback; không dùng khóa ghi của laptop và không mở cổng 8501 ra Internet.
+- Bổ sung bố cục màn hình hẹp. Xem hướng dẫn và phạm vi xác minh tại [CLOUD.md](CLOUD.md).
+
+## Cập nhật 14/11/2026 — lưu trữ cloud trên VPS đã có
+
+- Người dùng xác nhận triển khai PostgreSQL + thư mục ảnh + API nhận đồng bộ, Caddy HTTPS, laptop tiếp tục nhận diện và lưu local khi mất mạng.
+- Cân nhắc Supabase (database và object storage quản lý sẵn) hoặc VPS hiện có (tự vận hành). Chọn VPS vì đã truy cập được, còn tài nguyên và có Caddy HTTPS; đánh đổi là tự quản lý sao lưu, cập nhật và quyền truy cập.
+- Giữ SQLite làm nguồn local, thêm tiến trình đồng bộ độc lập để mạng không chặn pipeline nhận diện. Sổ xác nhận SQLite riêng; retry theo event_id, không ghi đè cùng ID với nội dung khác.
+- PostgreSQL lưu JSONB sự kiện và chỉ mục thời gian/biển số; ảnh content-addressed lưu ngoài database. API và ảnh yêu cầu bearer token; source URL và đường dẫn ảnh local được loại khỏi bản gửi.
+- Dùng đường dẫn `/iot-api/` trên hostname HTTPS hiện có; chỉ thêm route Caddy, giữ catch-all Jenkins. Chưa triển khai dashboard điện thoại hay đưa MQTT/AI lên VPS.
+- Sao lưu database và ảnh hằng ngày trên cùng VPS, giữ khoảng 7 ngày; chưa thay thế backup ngoài máy chủ. Xem [CLOUD.md](CLOUD.md).
+- Xem xét object storage/managed database khi ảnh tăng nhiều, cần độ sẵn sàng cao, nhiều thiết bị hoặc vận hành dài hạn.
+
 ## Cập nhật 05/11/2026 — demo không lọc chiều
 
 - Người dùng yêu cầu bỏ chiều vì demo một chiều. Đặt mặc định `expected_direction`/`--violation-direction` là `both`: mọi lần đổi phía qua đoạn vạch được phân loại theo màu đèn, không loại lượt vì hướng đi. Giữ kiểm tra crossing thật, dữ liệu đèn liên tục và timeout như trước.
